@@ -1,4 +1,10 @@
 source https://nuget.org/api/v2
+nuget Apache.NMS
+nuget Apache.NMS.ActiveMQ
+nuget FSharp.Control.AsyncSeq
+nuget FSharpx.Async
+nuget Nlog
+nuget System.Net.FtpClient
 
 group Build
   source https://nuget.org/api/v2

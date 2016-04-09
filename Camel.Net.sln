@@ -1,6 +1,7 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
 		paket.dependencies = paket.dependencies
@@ -34,6 +35,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.Net.Tests", "tests\Camel.Net.Tests\Camel.Net.Tests.fsproj", "{5A5167DF-C337-4EB2-9EB5-D6650102A246}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.Core", "src\Camel.Core\Camel.Core.fsproj", "{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.FTP", "src\Camel.FTP\Camel.FTP.fsproj", "{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.ActiveMQ", "src\Camel.ActiveMQ\Camel.ActiveMQ.fsproj", "{AD099F63-C951-4978-8564-5FD8AAAF3443}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,6 +55,18 @@ Global
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD099F63-C951-4978-8564-5FD8AAAF3443}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD099F63-C951-4978-8564-5FD8AAAF3443}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD099F63-C951-4978-8564-5FD8AAAF3443}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD099F63-C951-4978-8564-5FD8AAAF3443}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
