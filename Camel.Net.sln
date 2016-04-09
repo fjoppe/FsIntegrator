@@ -41,6 +41,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.FTP", "src\Camel.FTP\
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Camel.ActiveMQ", "src\Camel.ActiveMQ\Camel.ActiveMQ.fsproj", "{AD099F63-C951-4978-8564-5FD8AAAF3443}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts", "{36B68559-7787-4409-B6F6-2744253B20FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
