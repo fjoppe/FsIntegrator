@@ -1,5 +1,5 @@
-[![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/issue)](http://issuestats.com/github/fsprojects/ProjectScaffold)
-[![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/pr)](http://issuestats.com/github/fsprojects/ProjectScaffold)
+[![Issue Stats](http://issuestats.com/github/fjoppe/Camel.Net/badge/issue)](http://github.com/fjoppe/Camel.Net)
+[![Issue Stats](http://issuestats.com/github/fjoppe/Camel.Net/badge/pr)](http://github.com/fjoppe/Camel.Net)
 
 # Camel.Net
 F# DSL for Enterprise Integration Patterns
@@ -11,7 +11,7 @@ From.File fileListenerPath
     =>= To.Process f1
     =>= To.Process (maps, f2)
 ```
-
+ 
 Current focus of this DSL is on the DSL user experience, and less on the implementation of the machine-behind-the-scenes.
 
 
