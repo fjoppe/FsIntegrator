@@ -4,6 +4,8 @@ open Camel.Core
 open Camel.Core.General
 open Camel.FileHandling
 
+
+/// Contains the Core consumers, reference "Camel.Core.dll" to use it.
 module Consumers=
     type To = struct end
     type To with

@@ -4,6 +4,7 @@ open Camel.Core
 open Camel.Core.General
 open Camel.FileTransfer
 
+/// Contains the FTP Consumer, reference "Camel.FTP.dll" to use it.
 module Consumers=
     type To = struct end
     type To with

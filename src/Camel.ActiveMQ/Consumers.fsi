@@ -3,6 +3,7 @@
 open Camel.Core
 open Camel.Queing
 
+/// Contains the ActiveMQ consumer, reference "Camel.ActiveMQ.dll" to use it.
 module Consumers=
     type To = struct end
     type To with
