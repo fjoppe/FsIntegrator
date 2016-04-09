@@ -64,12 +64,14 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="General.fs" />
-    <Compile Include="Utility.fs" />
+    <Compile Include="InternalUtility.fs" />
     <Compile Include="EngineParts.fs" />
     <Compile Include="Definitions.fsi" />
     <Compile Include="Definitions.fs" />
     <Compile Include="RouteEngine.fsi" />
     <Compile Include="RouteEngine.fs" />
+    <Compile Include="PublicUtility.fs" />
+    <None Include="SubRoute.fs" />
     <Compile Include="FileSystemMonad.fsi" />
     <Compile Include="FileSystemMonad.fs" />
     <Compile Include="FileComponent.fsi" />

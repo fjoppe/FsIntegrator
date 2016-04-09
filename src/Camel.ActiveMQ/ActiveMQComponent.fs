@@ -9,7 +9,7 @@ open Apache.NMS
 open Apache.NMS.Util
 open Apache.NMS.ActiveMQ.Commands
 open NLog
-open FSharpx.Control
+open Camel.Utility
 
 
 exception ActiveMQComponentException of string
@@ -68,22 +68,11 @@ type State = {
         EngineServices  : IEngineServices option
         Connection      : IConnection option
         Session         : ISession option
-        TaskPool        : BlockingQueueAgent<int> option
+        TaskPool        : RestrictedResourcePool
     }
     with
     static member Create convertedOptions = 
-        let initial =  {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Connection = None; Session = None; TaskPool = None}
-        let result =
-            match convertedOptions.ConcurrentTasks with
-            |   1 -> initial
-            |   amount -> initial.SetTaskPool(amount)
-        result
-
-    member private this.SetTaskPool size =
-        let tokens = [1 .. size]
-        let agent = BlockingQueueAgent<int>(size)
-        tokens |> List.iter(fun item -> Async.RunSynchronously <| agent.AsyncAdd(item))
-        {this with TaskPool = Some(agent)}
+        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Connection = None; Session = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
 
     member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
     member this.SetEngineServices services = {this with EngineServices = services}
@@ -157,22 +146,9 @@ type ActiveMQ(props : Properties, state : State) as this =
 
         let rec loop() = async {
             match state.ProducerHook with
-            | Some(sendToRoute) ->
+            | Some(sendToRoute) -> 
                 try
-                    match state.TaskPool with
-                    |   None      ->  processMessage sendToRoute
-                    |   Some pool ->
-                        //  this will block execution, until there is a token in the pool
-                        let token = pool.AsyncGet() |> Async.RunSynchronously
-                        //  process async, to enable the next iteration for loop()
-                        async {
-                            try
-                                processMessage sendToRoute
-                            with
-                            |   e -> printfn "%A" e;  logger.Error e
-                            //  always release the toke to the pool
-                            pool.AsyncAdd(token) |> Async.RunSynchronously
-                        } |> Async.Start
+                    state.TaskPool.PooledAction(processMessage sendToRoute)
                 with
                 |   e -> printfn "%A" e
                          logger.Error e

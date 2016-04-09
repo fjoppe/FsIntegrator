@@ -12,7 +12,7 @@ open Camel.Core.General
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 open RemoteFileSystem
 open NLog
-open FSharpx.Control
+open Camel.Utility
 
 
 exception FtpComponentException of string
@@ -101,23 +101,13 @@ type State = {
         FtpClient       : FtpClient
         Timer           : Timer
         EngineServices  : IEngineServices option
-        TaskPool        : BlockingQueueAgent<int> option
+        TaskPool        : RestrictedResourcePool
     }
     with
     static member Create convertedOptions = 
         let timer = new Timer(Internal.secsToMsFloat <| convertedOptions.Interval)
-        let initial =  {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); FtpClient = new FtpClient(); EngineServices = None; TaskPool = None}
-        let result =
-            match convertedOptions.ConcurrentTasks with
-            |   1 -> initial
-            |   amount -> initial.SetTaskPool(amount)
-        result
+        {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); FtpClient = new FtpClient(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
 
-    member private this.SetTaskPool size =
-        let tokens = [1 .. size]
-        let agent = BlockingQueueAgent<int>(size)
-        tokens |> List.iter(fun item -> Async.RunSynchronously <| agent.AsyncAdd(item))
-        {this with TaskPool = Some(agent)}
 
     member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
     member this.SetEngineServices services = {this with EngineServices = services}
@@ -220,22 +210,7 @@ type Ftp(props : Properties, state : State) as this =
                             RemoteFile.Create name path ftpFile.FullName (ftpFile.Size) (ftpFile.Created) (ftpFile.Modified)
                         )
                     |> List.sortBy (fun fileInfo -> fileInfo.Created)
-                    |> List.iter(fun fileInfo -> 
-                        match state.TaskPool with
-                        |   None      ->  processFile fileInfo sendToRoute
-                        |   Some pool ->
-                            //  this will block execution, until there is a token in the pool
-                            let token = pool.AsyncGet() |> Async.RunSynchronously
-                            //  process async, to enable the next iteration for List.iter
-                            async {
-                                try
-                                    processFile fileInfo sendToRoute
-                                with
-                                |   e -> printfn "%A" e;  logger.Error e
-                                //  always release the toke to the pool
-                                pool.AsyncAdd(token) |> Async.RunSynchronously
-                            } |> Async.Start
-                        )
+                    |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(processFile fileInfo sendToRoute))
                 with
                 |   e -> printfn "%A" e
                          logger.Error e

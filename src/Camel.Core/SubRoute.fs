@@ -1,116 +1,45 @@
 ﻿namespace Camel.FileHandling
 
 open System
-open System.IO
-open System.Threading
-open System.Timers
 open Camel.Core
-open Camel.Core.General
 open Camel.Core.EngineParts
-open FileSystem
-open FSharp.Data.UnitSystems.SI.UnitSymbols
+open System.Threading
 open NLog
-open FSharpx.Control
-open Camel.Utility
 
-exception FileComponentException of string
-
-
-type FileMessageHeader = {
-        FileInfo : FileInfo
-    }
-    with
-        static member Create fileInfo =
-            { FileInfo = fileInfo}
-
-
-module Internal =
-    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
-
-
-type FileOption =
-     |  Interval of float<s>
-     |  CreatePathIfNotExists of bool
-     |  AfterSuccess of (Message -> FSScript)
-     |  AfterError   of (Message -> FSScript)
-     |  ConcurrentTasks of int
-
-
-type Options = {
-     Interval           : float<s>
-     CreateIfNotExists  : bool
-     AfterSuccess       : (Message -> FSScript)
-     AfterError         : (Message -> FSScript)
-     ConcurrentTasks    : int
-    }
-
-
-/// Contains "File" configuration
+/// Contains "SubRoute" configuration
 type Properties = {
         Id           : Guid
-        Path         : string
-        Options      : Options
+        Name         : string
+//        Options      : Options
     }
     with
-    /// Converts a list of FileOption into an Option record. Each given option overrides a default, so the defaults are coded here.
-    static member convertOptions options =
-        let subDir source sub =
-            let filename = Path.GetFileName(source)
-            let folder = Path.Combine(Path.GetDirectoryName(source), sub) 
-            (source, folder, Path.Combine(folder, filename))
-            
-        let defaultOptions = {
-            Interval = 10.0<s>; 
-            CreateIfNotExists = false
-            AfterSuccess = fun _ -> FSScript.Empty
-            AfterError = fun _ -> FSScript.Empty
-            ConcurrentTasks = 0
-        }
-        options 
-        |> List.fold (fun state option ->
-            match option with
-            |   Interval(i)              -> {state with Interval = i}
-            |   CreatePathIfNotExists(b) -> {state with CreateIfNotExists = b}
-            |   AfterSuccess(func)       -> {state with AfterSuccess = func}
-            |   AfterError(func)         -> {state with AfterError = func}
-            |   ConcurrentTasks(amount)  -> 
-                if amount > 0 then
-                    {state with ConcurrentTasks = amount}
-                else
-                    raise <| FileComponentException "ERROR: ConcurrentTasks must be larger than 0"
-        ) defaultOptions
-
-    static member Create path options = 
-        let convertedOptions = Properties.convertOptions options
-        {Id = Guid.NewGuid(); Path = path ; Options = convertedOptions}
+    static member Create path = 
+        {Id = Guid.NewGuid(); Name = path}
 
 
 /// Contains "File" state
 type State = {
         ProducerHook : ProducerMessageHook option
-        Timer           : Timer
         RunningState    : ProducerState
         Cancellation    : CancellationTokenSource
         EngineServices  : IEngineServices option
-        TaskPool        : RestrictedResourcePool
     }
     with
     static member Create convertedOptions = 
-        let timer = new Timer(Internal.secsToMsFloat <| convertedOptions.Interval)
-        {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
+        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None}
 
     member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
     member this.SetEngineServices services = {this with EngineServices = services}
 
 
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
-type File(props : Properties, state: State) as this = 
+type SubRoute(props : Properties, state: State) as this = 
     inherit ProducerConsumer()
 
     let logger = LogManager.GetLogger("debug"); 
 
     /// Change this instance's state
-    let changeState (newState:State) = File(props, newState)
+    let changeState (newState:State) = SubRoute(props, newState)
 
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail action =
@@ -131,49 +60,6 @@ type File(props : Properties, state: State) as this =
 
     /// State File polling
     member this.startFilePolling() = 
-        let configUri = new Uri(props.Path)
-
-        if not(Directory.Exists(configUri.AbsolutePath)) then
-            if props.Options.CreateIfNotExists then
-                try
-                    Directory.CreateDirectory(configUri.AbsolutePath) |> ignore
-                with
-                | e -> raise (FileComponentException(sprintf "Cannot create directory '%s'\n%A" configUri.AbsolutePath e))
-
-            else
-                raise (FileComponentException(sprintf "Cannot start File listener: path '%s' does not exists. Create the path, or configure File listener with 'CreatePathIfNotExists' setting." configUri.AbsolutePath))
-
-        /// Retrieve Xml content
-        let getXmlContent (f:FileInfo) = 
-            if f.Extension.ToLower() = ".xml" then 
-                use stream = f.OpenText()
-                stream.ReadToEnd()
-            else
-                ""
-
-        /// Process a file
-        let processFile fileInfo sendToRoute = 
-            //#region fsRun action // try .. with
-            /// Run filesystem commands, catch any exceptions
-            let fsRun action =
-                try
-                    FSScript.Run <| action
-                with
-                |  e -> 
-                    printfn "Exception! %A" e
-                    logger.Error(e)
-            //#endregion
-
-            let content = getXmlContent fileInfo
-            let message = Message.Empty.SetBody content
-            let message = message.SetProducerHeader <| FileMessageHeader.Create fileInfo
-            try
-                sendToRoute message
-                fsRun <| props.Options.AfterSuccess message
-            with
-            |  e -> 
-                fsRun <| props.Options.AfterError message
-
         /// Poll a target for files and process them. The polling stops when busy with a batch of files.
         let rec loop() = async {
             let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
@@ -184,7 +70,22 @@ type File(props : Properties, state: State) as this =
                     Directory.GetFiles(configUri.LocalPath)  |> List.ofArray
                         |> List.map(fun filename -> new FileInfo(filename))
                         |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
-                        |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(processFile fileInfo sendToRoute))
+                        |> List.iter(fun fileInfo -> 
+                            match state.TaskPool with
+                            |   None      ->  processFile fileInfo sendToRoute
+                            |   Some pool ->
+                                //  this will block execution, until there is a token in the pool
+                                let token = pool.AsyncGet() |> Async.RunSynchronously
+                                //  process async, to enable the next iteration for List.iter
+                                async {
+                                    try
+                                        processFile fileInfo sendToRoute
+                                    with
+                                    |   e -> printfn "%A" e;  logger.Error e
+                                    //  always release the toke to the pool
+                                    pool.AsyncAdd(token) |> Async.RunSynchronously
+                                } |> Async.Start
+                            )
                 with
                 |   e -> printfn "%A" e; logger.Error e
 
@@ -247,4 +148,3 @@ type File(props : Properties, state: State) as this =
         override this.ConsumerDriver with get() = this :> IConsumerDriver
     interface IConsumerDriver with
         member self.GetConsumerHook with get() = this.Consume
-

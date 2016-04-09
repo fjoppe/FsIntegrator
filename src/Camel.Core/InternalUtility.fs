@@ -3,7 +3,7 @@
 open System.IO
 open System.Xml.XPath
 
-module internal Utility =
+module internal InternalUtility =
     
     let substituteSingleXPath (xpath:XPathNavigator) (path:string) =
         try

@@ -25,7 +25,7 @@ module Consumers=
 
         /// Process a Message with a custom function
         static member Process (func : Message -> unit) = 
-            ProcessStep(Utility.CallAndReturnInput func)
+            ProcessStep(InternalUtility.CallAndReturnInput func)
 
         /// Process a Message with a custom function
         static member Process (func : Message -> Message) = 
@@ -33,9 +33,9 @@ module Consumers=
 
         /// Process a Message with a custom function, using an XPath mapping
         static member Process<'a when 'a : comparison> (mapper : Map<'a,string>, func : Map<'a,string> -> Message -> Message) =
-            ProcessStep(Utility.CallWithMapping mapper func)
+            ProcessStep(InternalUtility.CallWithMapping mapper func)
 
         /// Process a Message with a custom function, using an XPath mapping
         static member Process<'a when 'a : comparison> (mapper : Map<'a,string>, func : Map<'a,string> -> Message -> unit) =
-            ProcessStep(Utility.CallAndReturnInput(Utility.CallWithMapping mapper func))
+            ProcessStep(InternalUtility.CallAndReturnInput(InternalUtility.CallWithMapping mapper func))
 
