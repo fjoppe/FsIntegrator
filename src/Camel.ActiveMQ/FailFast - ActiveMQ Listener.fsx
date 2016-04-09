@@ -8,8 +8,8 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
-#r @"Camel.Core/bin/Camel.Core.dll"   // the order of #r to dll's is important
-#r @"Camel.ActiveMQ/bin/Camel.ActiveMQ.dll"
+#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important
+#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
 
 
 open System

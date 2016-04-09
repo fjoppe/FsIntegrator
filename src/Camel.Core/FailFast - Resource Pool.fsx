@@ -7,7 +7,7 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../.." 
-#r @"packages/FSharpx.Async.1.12.0/lib/net40/FSharpx.Async.dll"
+#r @"packages/FSharpx.Async/lib/net40/FSharpx.Async.dll"
 
 open FSharpx.Control
 

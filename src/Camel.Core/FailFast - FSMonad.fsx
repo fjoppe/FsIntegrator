@@ -7,7 +7,7 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
-#r @"Camel.Core/bin/Camel.Core.dll"
+#r @"Camel.Core/bin/Debug/Camel.Core.dll"
 
 
 open System

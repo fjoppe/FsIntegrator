@@ -8,10 +8,10 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
-#r @"Camel.ActiveMQ/bin/Apache.NMS.dll"
-#r @"Camel.ActiveMQ/bin/Apache.NMS.ActiveMQ.dll"
-#r @"Camel.Core/bin/Camel.Core.dll"
-#r @"Camel.ActiveMQ/bin/Camel.ActiveMQ.dll"
+#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.dll"
+#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.ActiveMQ.dll"
+#r @"Camel.Core/bin/Debug/Camel.Core.dll"
+#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
 
 
 open System

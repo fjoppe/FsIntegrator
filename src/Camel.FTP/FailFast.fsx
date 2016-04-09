@@ -1,6 +1,6 @@
 ﻿#I __SOURCE_DIRECTORY__
 #I ".."
-#r "Camel.FTP/bin/System.Net.FtpClient.dll"
+#r "Camel.FTP/bin/Debug/System.Net.FtpClient.dll"
 
 open System
 open System.IO
