@@ -1,27 +1,25 @@
 [![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/issue)](http://issuestats.com/github/fsprojects/ProjectScaffold)
 [![Issue Stats](http://issuestats.com/github/fsprojects/ProjectScaffold/badge/pr)](http://issuestats.com/github/fsprojects/ProjectScaffold)
 
-# ProjectScaffold
+# Camel.Net
+F# DSL for Enterprise Integration Patterns
 
-This project can be used to scaffold a prototypical .NET solution including file system layout and tooling. This includes a build process that: 
+Create easy message routes, like this:
 
-* updates all AssemblyInfo files
-* compiles the application and runs all test projects
-* generates [SourceLinks](https://github.com/ctaggart/SourceLink)
-* generates API docs based on XML document tags
-* generates [documentation based on Markdown files](http://fsprojects.github.io/ProjectScaffold/writing-docs.html)
-* generates [NuGet](http://www.nuget.org) packages
-* and allows a simple [one step release process](http://fsprojects.github.io/ProjectScaffold/release-process.html).
+```fsharp
+From.File fileListenerPath 
+    =>= To.Process f1
+    =>= To.Process (maps, f2)
+```
 
-In order to start the scaffolding process run 
+Current focus of this DSL is on the DSL user experience, and less on the implementation of the machine-behind-the-scenes.
+
+
+In order to build this project run: 
 
     > build.cmd // on windows    
     $ ./build.sh  // on unix
     
-Read the [Getting started tutorial](http://fsprojects.github.io/ProjectScaffold/index.html#Getting-started) to learn more.
-
-Documentation: http://fsprojects.github.io/ProjectScaffold
-
 
 ## Build Status
 
@@ -31,8 +29,5 @@ Mono | .NET
 
 ## Maintainer(s)
 
-- [@forki](https://github.com/forki)
-- [@pblasucci](https://github.com/pblasucci)
-- [@sergey-tihon](https://github.com/sergey-tihon)
+- [@fjoppe](https://github.com/fjoppe)
 
-The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
