@@ -1,0 +1,25 @@
+type project
+title
+    ##ProjectName##
+owners
+    Frank Joppe
+authors 
+    Frank Joppe
+projectUrl
+    http://github.com/fjoppe/Camel.Net
+iconUrl
+    https://raw.githubusercontent.com/fjoppe/Camel.Net/master/docs/files/img/logo.png
+licenseUrl
+    http://github.com/fjoppe/Camel.Net/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    fsharp dsl eip routes message
+summary
+    F# DSL for Enterprise Integration Patterns
+description
+    F# DSL for Enterprise Integration Patterns, create message routes from and to external systems, via a diversity of endpoint-technologies, File, FTP, Queueing
+
+
