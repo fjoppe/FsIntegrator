@@ -3,25 +3,36 @@
 open Camel.Core
 open Camel.Core.General
 open Camel.FileHandling
+open Camel.SubRoute
 
 module FileConsumerDefaults =
     let afterSuccessDefault = fun _ -> FSScript.Empty
 
     let afterErrorDefault  = fun _ -> FSScript.Empty
 
-    let defaultFsScripts = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
+    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
+
+module SubRouteConsumerDefaults =
+    let defaultConsumerOptions = []
 
 module Consumers=
     type To = struct end
     type To with
         /// Store a message's body in a File
         static member File(path) =
-            File(path, FileConsumerDefaults.defaultFsScripts) :> IConsumer
+            File(path, FileConsumerDefaults.defaultConsumerOptions) :> IConsumer
         
         /// Store a message's body in a File
         static member File(path, options) = 
-            File(path, FileConsumerDefaults.defaultFsScripts @ options) :> IConsumer
+            File(path, FileConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
 
+        /// Send a message to an active subroute
+        static member SubRoute(name) = 
+            SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions) :> IConsumer
+
+        /// Send a message to an active subroute
+        static member SubRoute(name, options) = 
+            SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
 
         /// Process a Message with a custom function
         static member Process (func : Message -> unit) = 

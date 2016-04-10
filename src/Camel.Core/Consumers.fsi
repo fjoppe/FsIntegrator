@@ -3,7 +3,7 @@
 open Camel.Core
 open Camel.Core.General
 open Camel.FileHandling
-
+open Camel.SubRoute
 
 /// Contains the Core consumers, reference "Camel.Core.dll" to use it.
 module Consumers=
@@ -14,6 +14,12 @@ module Consumers=
         
         /// Store a message's body in a File
         static member File : string * FileOption list -> IConsumer
+
+        /// Send a message to an active subroute
+        static member SubRoute : name: string -> IConsumer 
+
+        /// Send a message to an active subroute
+        static member SubRoute : name: string * options : SubRouteOption list -> IConsumer 
 
         /// Process a Message with a custom function
         static member Process : func : (Message -> unit) -> DefinitionType

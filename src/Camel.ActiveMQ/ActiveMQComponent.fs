@@ -145,15 +145,12 @@ type ActiveMQ(props : Properties, state : State) as this =
 
 
         let rec loop() = async {
-            match state.ProducerHook with
-            | Some(sendToRoute) -> 
-                try
-                    state.TaskPool.PooledAction(processMessage sendToRoute)
-                with
-                |   e -> printfn "%A" e
-                         logger.Error e
-            | None -> 
-                Async.Sleep (WaitForHook*1000) |> Async.RunSynchronously
+            let sendToRoute = state.ProducerHook.Value
+            try
+                state.TaskPool.PooledAction(fun () -> processMessage sendToRoute)
+            with
+            |   e -> printfn "%A" e
+                     logger.Error e
             return! loop()
         }
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)       

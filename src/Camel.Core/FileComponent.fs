@@ -178,17 +178,15 @@ type File(props : Properties, state: State) as this =
         let rec loop() = async {
             let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
 
-            match state.ProducerHook with
-            | Some(sendToRoute) ->
-                try
-                    Directory.GetFiles(configUri.LocalPath)  |> List.ofArray
-                        |> List.map(fun filename -> new FileInfo(filename))
-                        |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
-                        |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(processFile fileInfo sendToRoute))
-                with
-                |   e -> printfn "%A" e; logger.Error e
+            let sendToRoute = state.ProducerHook.Value
+            try
+                Directory.GetFiles(configUri.LocalPath)  |> List.ofArray
+                    |> List.map(fun filename -> new FileInfo(filename))
+                    |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
+                    |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
+            with
+            |   e -> printfn "%A" e; logger.Error e
 
-            | None -> Async.Sleep (WaitForHook*1000) |> Async.RunSynchronously
             return! loop()
         }
         state.Timer.Start()

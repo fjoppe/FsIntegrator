@@ -9,7 +9,7 @@ module FtpConsumerDefaults =
 
     let afterErrorDefault  = fun _ -> FtpScript.Empty
 
-    let defaultFsScripts = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
+    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
 
 
 module Consumers =
@@ -17,9 +17,9 @@ module Consumers =
     type To with
         /// Store a message's body in a remote file
         static member Ftp(path, connection) =
-            Ftp(path, connection, FtpConsumerDefaults.defaultFsScripts) :> IConsumer
+            Ftp(path, connection, FtpConsumerDefaults.defaultConsumerOptions) :> IConsumer
         
         /// Store a message's body in a remote file
         static member Ftp(path, connection, options) = 
-            Ftp(path, connection, FtpConsumerDefaults.defaultFsScripts @ options) :> IConsumer
+            Ftp(path, connection, FtpConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
 

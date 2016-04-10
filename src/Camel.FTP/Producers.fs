@@ -37,15 +37,15 @@ module FtpProducerDefaults =
                     }
             |   None      -> failwith "No file headers found! If you see this error, then it is a framework issue."
 
-    let defaultFsScripts = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1)]
+    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1)]
 
 
 module Producers =
     type From = struct end
     type From with
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member Ftp(path, connection) = Ftp(path, connection, FtpProducerDefaults.defaultFsScripts)
+        static member Ftp(path, connection) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions)
 
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member Ftp(path, connection, options) = Ftp(path, connection, FtpProducerDefaults.defaultFsScripts @ options)
+        static member Ftp(path, connection, options) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions @ options)
 

@@ -1,32 +1,58 @@
-﻿namespace Camel.FileHandling
+﻿namespace Camel.SubRoute
 
 open System
 open Camel.Core
+open Camel.Core.General
 open Camel.Core.EngineParts
 open System.Threading
 open NLog
+
+exception SubRouteException of string
+
+type Agent<'a>  = MailboxProcessor<'a>
+
+type SubRouteOption =
+     |  FailForMissingActiveSubRoute of bool
+
+type Options = {
+     FailForMissingActiveSubRoute : bool
+}
 
 /// Contains "SubRoute" configuration
 type Properties = {
         Id           : Guid
         Name         : string
-//        Options      : Options
+        Options      : Options
     }
     with
-    static member Create path = 
-        {Id = Guid.NewGuid(); Name = path}
+    static member convertOptions options =
+        let defaultOptions = {
+            FailForMissingActiveSubRoute = false;
+            }
+        options 
+        |> List.fold (fun state option ->
+            match option with
+            |   FailForMissingActiveSubRoute b -> {state with FailForMissingActiveSubRoute = b}
+        ) defaultOptions
+
+    static member Create path options = 
+        let convertedOptions = Properties.convertOptions options
+        {Id = Guid.NewGuid(); Name = path; Options = convertedOptions}
 
 
-/// Contains "File" state
+type SubRouteMessage = Message * AsyncReplyChannel<Exception option>
+
+/// Contains "SubRoute" state
 type State = {
-        ProducerHook : ProducerMessageHook option
+        ProducerHook    : ProducerMessageHook option
         RunningState    : ProducerState
         Cancellation    : CancellationTokenSource
         EngineServices  : IEngineServices option
+        Driver          : Agent<SubRouteMessage> option
     }
     with
     static member Create convertedOptions = 
-        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None}
+        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Driver = None}
 
     member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
     member this.SetEngineServices services = {this with EngineServices = services}
@@ -44,7 +70,7 @@ type SubRoute(props : Properties, state: State) as this =
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail action =
         if state.ProducerHook.IsSome then action
-        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." props.Path))
+        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." props.Name))
 
     member private this.Properties with get() = props
     member private this.State with get() = state
@@ -58,47 +84,28 @@ type SubRoute(props : Properties, state: State) as this =
                 changeState {intermediateState with RunningState = targetState} :> IProducerDriver
             )
 
-    /// State File polling
+    /// State Subroute
     member this.startFilePolling() = 
-        /// Poll a target for files and process them. The polling stops when busy with a batch of files.
-        let rec loop() = async {
-            let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
-
-            match state.ProducerHook with
-            | Some(sendToRoute) ->
-                try
-                    Directory.GetFiles(configUri.LocalPath)  |> List.ofArray
-                        |> List.map(fun filename -> new FileInfo(filename))
-                        |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
-                        |> List.iter(fun fileInfo -> 
-                            match state.TaskPool with
-                            |   None      ->  processFile fileInfo sendToRoute
-                            |   Some pool ->
-                                //  this will block execution, until there is a token in the pool
-                                let token = pool.AsyncGet() |> Async.RunSynchronously
-                                //  process async, to enable the next iteration for List.iter
-                                async {
-                                    try
-                                        processFile fileInfo sendToRoute
-                                    with
-                                    |   e -> printfn "%A" e;  logger.Error e
-                                    //  always release the toke to the pool
-                                    pool.AsyncAdd(token) |> Async.RunSynchronously
-                                } |> Async.Start
-                            )
-                with
-                |   e -> printfn "%A" e; logger.Error e
-
-            | None -> Async.Sleep (WaitForHook*1000) |> Async.RunSynchronously
-            return! loop()
-        }
-        state.Timer.Start()
-        Async.Start(loop(), cancellationToken = state.Cancellation.Token)
-        state
+        let sendToRoute = state.ProducerHook.Value
+        let agent = 
+            new Agent<SubRouteMessage>((fun inbox ->
+                let rec loop() = async {
+                    let! message, replyChannel = inbox.Receive()
+                    try
+                        sendToRoute message
+                        replyChannel.Reply(None)
+                    with
+                    |   e -> replyChannel.Reply(Some(e))
+                    return! loop()
+                }
+                loop()
+            ),cancellationToken = state.Cancellation.Token            
+        )
+        agent.Start()
+        {state with Driver = Some(agent)}
 
 
     member this.stopFilePolling() = 
-        state.Timer.Stop()
         state.Cancellation.Cancel()
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
@@ -106,7 +113,7 @@ type SubRoute(props : Properties, state: State) as this =
     new(path, optionList) =
         let options = Properties.Create path optionList
         let fileState = State.Create <| options.Options
-        File(options, fileState)
+        SubRoute(options, fileState)
 
 
     //  Producer
@@ -122,29 +129,39 @@ type SubRoute(props : Properties, state: State) as this =
             match state.EngineServices with
             |   None        -> false
             |   Some engine ->
-                let fileListenerList = engine.producerList<File>()
+                let producerList = engine.producerList<SubRoute>()
                 let invalid = 
-                    fileListenerList |>  List.tryPick(fun fp -> 
+                    producerList |>  List.tryPick(fun fp -> 
                         let refId = fp.Properties.Id
-                        let refPath = fp.Properties.Path
+                        let refName = fp.Properties.Name
                         let foundList = 
-                            fileListenerList 
+                            producerList 
                             |> List.filter(fun i -> i.Properties.Id <> refId)
-                            |> List.filter(fun i -> i.Properties.Path = refPath)
+                            |> List.filter(fun i -> i.Properties.Name = refName)
                         if foundList.Length = 0 then None
                         else Some(foundList.Head)
                     )
                 invalid.IsNone
 
     //  Consumer
-    member private this.writeFile (message:Message) =
-        let configUri = new Uri(props.Path)
-        File.WriteAllText(configUri.AbsolutePath, message.Body)
-
     member private this.Consume (message:Message) =
-        this.writeFile message
+        let services = state.EngineServices.Value
+        let producerList = services.producerList<SubRoute>()
+        let producerCandidate = producerList |> List.tryFind(fun i -> i.Properties.Name = props.Name && i.State.RunningState = ProducerState.Running)
+        match producerCandidate with
+        |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" props.Name)
+                         else ()    // for now: ignore and continue
+        |   Some producer ->    
+                match producer.State.Driver with
+                |   None         -> raise <| SubRouteException(sprintf "ERROR: Subroute was found to be active, but does not have a driver for SubRoute '%s' - this is a framework problem, this may never occur." props.Name)
+                |   Some  driver ->
+                    let response = driver.PostAndReply(fun replyChannel -> (message, replyChannel))
+                    match response with
+                    |   None    -> ()
+                    |   Some e  -> raise e
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver with get() = this :> IConsumerDriver
     interface IConsumerDriver with
         member self.GetConsumerHook with get() = this.Consume
+

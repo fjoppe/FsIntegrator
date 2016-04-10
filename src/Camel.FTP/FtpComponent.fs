@@ -199,23 +199,21 @@ type Ftp(props : Properties, state : State) as this =
         let rec loop() = async {
             let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
 
-            match state.ProducerHook with
-            | Some(sendToRoute) ->
-                try
-                    client.GetListing(props.Path) |> List.ofArray
-                    |> List.map(
-                        fun ftpFile ->
-                            let name, path = ftpFile.Name, ftpFile.FullName
-                            let path = path.Substring(0, path.Length-name.Length)
-                            RemoteFile.Create name path ftpFile.FullName (ftpFile.Size) (ftpFile.Created) (ftpFile.Modified)
-                        )
-                    |> List.sortBy (fun fileInfo -> fileInfo.Created)
-                    |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(processFile fileInfo sendToRoute))
-                with
-                |   e -> printfn "%A" e
-                         logger.Error e
+            let sendToRoute = state.ProducerHook .Value
+            try
+                client.GetListing(props.Path) |> List.ofArray
+                |> List.map(
+                    fun ftpFile ->
+                        let name, path = ftpFile.Name, ftpFile.FullName
+                        let path = path.Substring(0, path.Length-name.Length)
+                        RemoteFile.Create name path ftpFile.FullName (ftpFile.Size) (ftpFile.Created) (ftpFile.Modified)
+                    )
+                |> List.sortBy (fun fileInfo -> fileInfo.Created)
+                |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
+            with
+            |   e -> printfn "%A" e
+                     logger.Error e
 
-            | None -> Async.Sleep (WaitForHook*1000) |> Async.RunSynchronously
             return! loop()
         }
         state.Timer.Start()

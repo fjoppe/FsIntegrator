@@ -4,6 +4,7 @@ open System.IO
 open Camel.Core.General
 open Camel.FileHandling
 open Camel.FileHandling.FileSystem
+open Camel.SubRoute
 
 module FileProducerDefaults =
     let subDir source sub =
@@ -35,15 +36,24 @@ module FileProducerDefaults =
                     }
             |   None      -> failwith "No file headers found! If you see this error, then it is a framework issue."
 
-    let defaultFsScripts = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); ConcurrentTasks(1)]
+    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); ConcurrentTasks(1)]
+
+module SubRouteProducerDefaults =
+
+    let defaultProducerOptions = []
 
 module Producers =
     type From = struct end
     type From with
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member File(path)          = File(path, FileProducerDefaults.defaultFsScripts)
+        static member File(path)          = File(path, FileProducerDefaults.defaultProducerOptions)
 
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member File(path, options) = File(path, FileProducerDefaults.defaultFsScripts @ options)
+        static member File(path, options) = File(path, FileProducerDefaults.defaultProducerOptions @ options)
  
+        /// Create a Subroute, which is identified by the specified name
+        static member SubRoute(name)          = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions)
+
+        /// Create a Subroute, which is identified by the specified name
+        static member SubRoute(name, options) = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions @ options)
 

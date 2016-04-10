@@ -19,14 +19,14 @@ module Utility =
 
             member this.PooledAction action =
                 match this.Pool with
-                |   None      ->  action
+                |   None      ->  action()
                 |   Some pool ->
                     //  this will block execution, until there is a token in the pool
                     let token = pool.AsyncGet() |> Async.RunSynchronously
                     //  process async, to enable the next iteration for List.iter
                     async {
                         try
-                            action
+                            action()
                         finally
                             //  always release the toke to the pool
                             pool.AsyncAdd(token) |> Async.RunSynchronously
