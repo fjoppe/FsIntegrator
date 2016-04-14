@@ -21,9 +21,9 @@ module EngineParts =
     [<Literal>]
     let WaitForHook = 10;
 
-    type ProducerMessageHook = (Message -> unit)
+    type ProducerMessageHook = (Message -> Message)
 
-    type ConsumerMessageHook = (Message -> unit)
+    type ConsumerMessageHook = (Message -> Message)
 
 
     type ProducerState =

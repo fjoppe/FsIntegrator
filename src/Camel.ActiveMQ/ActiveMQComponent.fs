@@ -41,7 +41,7 @@ type Properties = {
             DestinationType = DestinationType.Queue
             Connection = new Uri("urn:invalid")
             Credentials = None
-            ConcurrentTasks = 0
+            ConcurrentTasks = -1
         }
         options 
         |> List.fold (fun state option ->
@@ -139,14 +139,15 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             try
                 let content = getXmlContent amqMessage
                 let message = Message.Empty.SetBody content
-                send message
+                send message |> ignore
                 amqMessage.Acknowledge()
             with
             |   MessageFormatException(s) -> logger.Error "Skipping"
 
         let processMessage send =
             let amqMessage = consumer.Receive()
-            sendMessage send amqMessage
+            logger.Debug(sprintf "Received message from: %s - %A" props.Destination props.DestinationType)
+            sendMessage send amqMessage 
 
 
         let rec loop() = async {
@@ -268,6 +269,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             logger.Debug(sprintf "Send message to %s - %A" props.Destination props.DestinationType)
             let messageToSend = producer.CreateTextMessage(message.Body)
             producer.Send(messageToSend)
+            message
         with
         |   e ->
             logger.Error(sprintf "Error: %A" e)

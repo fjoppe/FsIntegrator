@@ -189,7 +189,7 @@ type Ftp(props : Properties, initialState : State) as this =
             let message = Message.Empty.SetBody content
             let message = message.SetProducerHeader <|  FtpMessageHeader.Create fileInfo
             try
-                sendToRoute message
+                sendToRoute message |> ignore
                 fsRun <| props.Options.AfterSuccess message
             with
             |  e -> 
@@ -336,6 +336,7 @@ type Ftp(props : Properties, initialState : State) as this =
 
     member private this.Consume (message:Message) =
         this.writeFile message
+        message
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver 

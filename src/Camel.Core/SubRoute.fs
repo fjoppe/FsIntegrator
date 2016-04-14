@@ -40,7 +40,7 @@ type Properties = {
         {Id = Guid.NewGuid(); Name = path; Options = convertedOptions}
 
 
-type SubRouteMessage = Message * AsyncReplyChannel<Exception option>
+type SubRouteMessage = Message * FunctionsAsyncResponse<Message>
 
 /// Contains "SubRoute" state
 type State = {
@@ -64,6 +64,7 @@ type Operation =
     |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
     |   GetRunningState of FunctionsAsyncResponse<ProducerState>
     |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
+    |   GetDriver of FunctionsAsyncResponse<Agent<SubRouteMessage>>
 
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type SubRoute(props : Properties, initialState: State) as this = 
@@ -93,10 +94,11 @@ type SubRoute(props : Properties, initialState: State) as this =
                 let rec loop() = async {
                     let! message, replyChannel = inbox.Receive()
                     try
-                        sendToRoute message
-                        replyChannel.Reply(None)
+                        let result = sendToRoute message
+                        replyChannel.Reply(Response(result))
                     with
-                    |   e -> replyChannel.Reply(Some(e))
+                    |   e -> 
+                        replyChannel.Reply(ERROR(e))
                     return! loop()
                 }
                 loop()
@@ -149,6 +151,12 @@ type SubRoute(props : Properties, initialState: State) as this =
                         |   None       -> replychannel.Reply <| ERROR(SubRouteException("This consumer is not connected with a route-engine"))
                         |   Some value -> replychannel.Reply <| Response(value)
                         return! loop state
+                    |   GetDriver replychannel ->
+                        logger.Debug "GetDriver"
+                        match state.Driver with
+                        |   None        -> replychannel.Reply <| ERROR(SubRouteException(sprintf "ERROR: Subroute does not have an active listener for '%s' - this is a framework problem, this may never occur." props.Name))
+                        |   Some driver -> replychannel.Reply <| Response(driver)
+                        return! loop state
                 }
             loop initialState)
         newAgent.Start()
@@ -156,6 +164,7 @@ type SubRoute(props : Properties, initialState: State) as this =
 
     member private this.Properties with get() = props
     member private this.State with get() = initialState
+    member private this.Agent with get() = agent
 
     new(path, optionList) =
         let options = Properties.Create path optionList
@@ -204,23 +213,21 @@ type SubRoute(props : Properties, initialState: State) as this =
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let producerList = services.producerList<SubRoute>()
-            let producerCandidate = producerList |> List.tryFind(fun i -> i.Properties.Name = props.Name && i.State.RunningState = ProducerState.Running)
+            let producerCandidate = 
+                producerList |> List.tryFind(
+                    fun producer -> 
+                        let producerRunningState = (producer :> ``Provide a Producer Driver``).ProducerDriver.RunningState
+                        producer.Properties.Name = props.Name && producerRunningState = ProducerState.Running)
             match producerCandidate with
             |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" props.Name)
                              else 
                                 logger.Debug(sprintf "Missing active subroute '%s', ignore and continue" props.Name)
-                                ()    // for now: ignore and continue
-            |   Some producer ->    
-                    match producer.State.Driver with
-                    |   None         -> 
-                        let msg = sprintf "ERROR: Subroute was found to be active, but does not have a driver for SubRoute '%s' - this is a framework problem, this may never occur." props.Name
-                        logger.Error msg
-                        raise <| SubRouteException(msg)
-                    |   Some  driver ->
-                        let response = driver.PostAndReply(fun replyChannel -> (message, replyChannel))
-                        match response with
-                        |   None    -> ()
-                        |   Some e  -> raise e
+                                message    // for now: ignore and continue
+            |   Some producer ->  
+                let driverResponse = producer.Agent.PostAndReply(fun replychannel -> GetDriver(replychannel))
+                let driver = driverResponse.GetResponseOrRaise()
+                let response = driver.PostAndReply(fun replyChannel -> (message, replyChannel))
+                response.GetResponseOrRaise()
         with
         |   e ->
             logger.Error(sprintf "Error: %A" e)
@@ -228,6 +235,7 @@ type SubRoute(props : Properties, initialState: State) as this =
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver with get() = this :> IConsumerDriver
+
     interface IConsumerDriver with
         member self.GetConsumerHook with get() = this.Consume
 

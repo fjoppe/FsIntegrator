@@ -4,7 +4,7 @@ open System
 open FSharpx.Control
 
 module Utility =
-    type RestrictedResourcePool = {
+    type RestrictedResourcePool  = {
             Pool : BlockingQueueAgent<int> option
         }
         with
@@ -16,6 +16,7 @@ module Utility =
                     let agent = BlockingQueueAgent<int>(size)
                     tokens |> List.iter(fun item -> Async.RunSynchronously <| agent.AsyncAdd(item))
                     {Pool = Some(agent)}
+
 
             member this.PooledAction action =
                 match this.Pool with
@@ -30,7 +31,7 @@ module Utility =
                         finally
                             //  always release the toke to the pool
                             pool.AsyncAdd(token) |> Async.RunSynchronously
-                    } |> Async.Start
+                    } |> Async.RunSynchronously
                 
     type ActionResponse =
         |   OK

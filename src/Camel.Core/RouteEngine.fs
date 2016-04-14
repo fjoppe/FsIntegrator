@@ -19,7 +19,6 @@ module RouteEngine =
             |   ProcessStep func -> func m
             |   Consume(consumerComponent, func) -> func m
         ) message 
-        |> ignore
 
 
     type RouteInfo = {

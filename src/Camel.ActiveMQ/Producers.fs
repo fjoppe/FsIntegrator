@@ -6,8 +6,9 @@ open Camel.Queing
 module ActiveMQProducerDefaults =
     let connection = Connection("activemq:tcp://localhost:61616")
     let destinationType = DestinationType(DestinationType.Queue)
+    let concurrentTasks = ConcurrentTasks(1)
 
-    let defaultProducerOptions = [connection;destinationType]
+    let defaultProducerOptions = [connection;destinationType;concurrentTasks]
 
 module Producers =
     type From = struct end

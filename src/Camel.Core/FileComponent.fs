@@ -86,7 +86,7 @@ type Properties = {
 
 /// Contains "File" state
 type State = {
-        ProducerHook : ProducerMessageHook option
+        ProducerHook    : ProducerMessageHook option
         Timer           : Timer
         RunningState    : ProducerState
         Cancellation    : CancellationTokenSource
@@ -173,7 +173,7 @@ type File(props : Properties, initialState: State) as this =
             let message = Message.Empty.SetBody content
             let message = message.SetProducerHeader <| FileMessageHeader.Create fileInfo
             try
-                sendToRoute message
+                sendToRoute message |> ignore
                 fsRun <| props.Options.AfterSuccess message
                 logger.Debug(sprintf "File OK: Processed AfterSuccess()")
             with
@@ -309,6 +309,7 @@ type File(props : Properties, initialState: State) as this =
         try
             logger.Debug(sprintf "Write message to path: %s" props.Path)
             this.writeFile message
+            message
         with
         |   e ->
             logger.Error(sprintf "Error: %A" e)

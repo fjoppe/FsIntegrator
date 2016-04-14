@@ -6,12 +6,18 @@
 //
 //  And in between we print content to the screen.
 //
+//  Logs can be found under: ./src/TestScripts/logs/<scriptname>.log
+//  
+//  Prerequisites:
+//      1.  A running installation of ActiveMQ (for example you can install apache ServiceMix)
+//      2.  A running FTP service
+//  
 //  ============================================================================================================
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important
+#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important, this one comes first
 #r @"Camel.FTP/bin/Debug/Camel.FTP.dll"
 #r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
 #r @"NLog/lib/net45/NLog.dll"
@@ -27,9 +33,9 @@ open Camel.Core.RouteEngine
 open Camel.FileTransfer
 open Camel.Queing
 
-//  Configure Nlog
+//  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
-let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs/log.txt"))
+let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs", (sprintf "%s.log" __SOURCE_FILE__)))
 let xmlConfig = new NLog.Config.XmlLoggingConfiguration(nlogPath)
 xmlConfig.Variables.Item("logpath") <- Layouts.SimpleLayout(logfile)
 LogManager.Configuration <- xmlConfig
@@ -53,7 +59,7 @@ let Process2 = To.Process(maps, fun mp m -> printfn "processing: %s" mp.["hi-mes
 let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFullRoute") |> Path.GetFullPath
 
 
-//  This route causes stability problems in the current code - it is a good test :)
+//  This sub route is re-used in both other routes
 let Route1 = 
     From.SubRoute "subroute"
     =>= Process1 
@@ -88,6 +94,11 @@ StartRoute id1
 StartRoute id2
 StartRoute id3
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
+
+//  At this point, any xml file in ./src/TestExamples/TestFullRoute/ will be processed (see prereqs)
+//  If successful the file is copied to: ./src/TestExamples/TestFullRoute/.camel
+//  If error      the file is copied to: ./src/TestExamples/TestFullRoute/.error
+//  Tip: you can move a file in the .camel or .error folder back to the .../TestFullRoute/ folder
 
 printfn "***************************"
 
