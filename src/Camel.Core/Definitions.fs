@@ -8,7 +8,7 @@ open Camel.Core.EngineParts
 
 type DefinitionType =
     | ProcessStep of (Message -> Message)
-    | Consume     of (Message -> Message)
+    | Consume     of IConsumer * (Message -> Message)
     with
         static member (=>=) (l:DefinitionType, r:DefinitionType)      = [l;r]
         static member (=>=) (l:DefinitionType, r:DefinitionType list) = l::r
@@ -28,6 +28,16 @@ type Route = {
         member internal this.Producer with  get() = this.Producer'
         member internal this.SetProducer p = { this with Producer' = p}
         member internal this.Route with get() = this.Route'
+        member internal this.Register services =
+            let reg data =
+                match box(data) with
+                | :? IRegisterEngine as re -> re.Register services
+                | _ -> ()
+            reg this.Producer'
+            this.Route' |> List.iter(fun routeElm ->
+                match routeElm with
+                | Consume(consumerComponent, hook) -> reg consumerComponent
+                | _ -> ())
 and
     [<AbstractClass>]
     Producer() = 
@@ -50,7 +60,7 @@ and
                 let processConsumption message = 
                     message |> consumberHook
                     message
-                Consume(processConsumption)
+                Consume(c, processConsumption)
             // A Consumer must also implement RouteEngine.IConsumerDriver, but make this implementation invisible via signature file.
             | _ -> raise(ImplementationException (sprintf "The Consumer component '%s' does not comply with implementation rules." (c.GetType().Name)))
 

@@ -90,7 +90,7 @@ type Operation =
 type ActiveMQ(props : Properties, initialState : State) as this = 
     inherit ProducerConsumer()
 
-    let logger = LogManager.GetLogger("debug"); 
+    let logger = LogManager.GetLogger(this.GetType().FullName); 
 
     //  Utility functions
     let changeState (newState:State) = ActiveMQ(props, newState)
@@ -117,6 +117,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
+            logger.Debug(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     //  Start listening for messages
@@ -159,6 +160,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         }
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)       
         connection.Start()
+        logger.Debug(sprintf "Started ActiveMQ Listener for destination: %s - %A" props.Destination props.DestinationType)
         { state with Connection = Some connection; Session = Some session}
 
         
@@ -177,6 +179,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             let msg = "ActiveMQ has no Connection set, this may never occur!"
             logger.Error(msg)
             printfn "%s"msg
+        logger.Debug(sprintf "Stopped ActiveMQ Listener for destination: %s - %A" props.Destination props.DestinationType)
         { state with Connection = None; Session = None; Cancellation = new CancellationTokenSource()} // the CancellationToken is not reusable, so we make this for the next "start"
 
 
@@ -203,18 +206,24 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             let rec loop (state:State) = 
                 async {
                     try
+                        logger.Debug "Waiting for message.."
                         let! command = inbox.Receive()
                         match command with
                         |   SetProducerHook (hook, replychannel) -> 
+                            logger.Debug "SetProducerHook"
                             return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                         |   SetEngineServices (svc, replychannel) -> 
+                            logger.Debug "SetEngineServices"
                             return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                         |   ChangeRunningState (targetState, action, replychannel) ->
+                            logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
                             return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                         |   GetRunningState replychannel ->
+                            logger.Debug "GetRunningState"
                             replychannel.Reply <| Response(state.RunningState)
                             return! loop state
                         |   GetSession replychannel ->
+                            logger.Debug "GetSession"
                             let connection = getOrCreate (state.Connection) (fun () -> getActiveMQConnection())
                             let session = getOrCreate (state.Session) (fun () -> connection.CreateSession(AcknowledgementMode.ClientAcknowledge))
                             replychannel.Reply <| Response(session)
@@ -244,7 +253,6 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         member this.Start() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Running, startListening, replychannel)) |> ignore
         member this.Stop() =  agent.PostAndReply(fun replychannel -> ChangeRunningState(Stopped, stopListening, replychannel)) |> ignore
         member this.SetProducerHook hook = agent.PostAndReply(fun replychannel -> SetProducerHook(hook, replychannel)) |> ignore
-        member this.Register services =  agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore
 
         member this.RunningState 
             with get () = 
@@ -256,19 +264,28 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
     //  ===============================================  Consumer  ===============================================
     member private this.Consume (producer:IMessageProducer) (message:Camel.Core.General.Message) =        
-        let messageToSend = producer.CreateTextMessage(message.Body)
-        producer.Send(messageToSend)
-
+        try
+            logger.Debug(sprintf "Send message to %s - %A" props.Destination props.DestinationType)
+            let messageToSend = producer.CreateTextMessage(message.Body)
+            producer.Send(messageToSend)
+        with
+        |   e ->
+            logger.Error(sprintf "Error: %A" e)
+            reraise()
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver with get() = this :> IConsumerDriver
 
 
     interface IConsumerDriver with
-            member self.GetConsumerHook
-                with get() =
-                    let sessionResponse = agent.PostAndReply(fun replychannel -> GetSession(replychannel))
-                    let session = sessionResponse.GetResponseOrRaise()
-                    let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
-                    let producer = session.CreateProducer(destination)
-                    this.Consume producer
+        member self.GetConsumerHook
+            with get() =
+                logger.Debug("GetConsumerHook.get()")
+                let sessionResponse = agent.PostAndReply(fun replychannel -> GetSession(replychannel))
+                let session = sessionResponse.GetResponseOrRaise()
+                let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
+                let producer = session.CreateProducer(destination)
+                this.Consume producer
+
+    interface IRegisterEngine with
+        member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore

@@ -113,7 +113,7 @@ type Operation =
 type File(props : Properties, initialState: State) as this = 
     inherit ProducerConsumer()
 
-    let logger = LogManager.GetLogger("debug"); 
+    let logger = LogManager.GetLogger(this.GetType().FullName); 
 
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail state action =
@@ -125,6 +125,7 @@ type File(props : Properties, initialState: State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
+            logger.Debug(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     /// State File polling
@@ -135,11 +136,17 @@ type File(props : Properties, initialState: State) as this =
             if props.Options.CreateIfNotExists then
                 try
                     Directory.CreateDirectory(configUri.AbsolutePath) |> ignore
+                    logger.Debug(sprintf "Created directory: %s" configUri.AbsolutePath)
                 with
-                | e -> raise (FileComponentException(sprintf "Cannot create directory '%s'\n%A" configUri.AbsolutePath e))
+                | e -> 
+                    let msg = sprintf "Cannot create directory '%s'\n%A" configUri.AbsolutePath e
+                    logger.Error msg
+                    raise (FileComponentException(msg))
 
             else
-                raise (FileComponentException(sprintf "Cannot start File listener: path '%s' does not exists. Create the path, or configure File listener with 'CreatePathIfNotExists' setting." configUri.AbsolutePath))
+                let msg =sprintf "Cannot start File listener: path '%s' does not exists. Create the path, or configure File listener with 'CreatePathIfNotExists' setting." configUri.AbsolutePath
+                logger.Error msg
+                raise (FileComponentException(msg))
 
         /// Retrieve Xml content
         let getXmlContent (f:FileInfo) = 
@@ -168,9 +175,12 @@ type File(props : Properties, initialState: State) as this =
             try
                 sendToRoute message
                 fsRun <| props.Options.AfterSuccess message
+                logger.Debug(sprintf "File OK: Processed AfterSuccess()")
             with
             |  e -> 
+                logger.Error(sprintf "Error: %A" e)
                 fsRun <| props.Options.AfterError message
+                logger.Debug(sprintf "File Error: Processed AfterError")
 
         /// Poll a target for files and process them. The polling stops when busy with a batch of files.
         let rec loop() = async {
@@ -181,7 +191,9 @@ type File(props : Properties, initialState: State) as this =
                 Directory.GetFiles(configUri.LocalPath)  |> List.ofArray
                     |> List.map(fun filename -> new FileInfo(filename))
                     |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
-                    |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
+                    |> List.iter(fun fileInfo -> 
+                        logger.Debug(sprintf "Send file to route: %s" fileInfo.FullName)
+                        state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
             with
             |   e -> printfn "%A" e; logger.Error e
 
@@ -189,12 +201,14 @@ type File(props : Properties, initialState: State) as this =
         }
         state.Timer.Start()
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)
+        logger.Debug(sprintf "Started FileListener for path: %s" props.Path)
         state
 
 
     let stopFilePolling state = 
         state.Timer.Stop()
         state.Cancellation.Cancel()
+        logger.Debug(sprintf "Stopped FileListener for path: %s" props.Path)
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     let agent = 
@@ -212,22 +226,32 @@ type File(props : Properties, initialState: State) as this =
 
             let rec loop (state:State) = 
                 async {
+                    logger.Debug "Waiting for message.."
                     let! command = inbox.Receive()
-                    match command with
-                    |   SetProducerHook (hook, replychannel) -> 
-                        return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
-                    |   SetEngineServices (svc, replychannel) -> 
-                        return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
-                    |   ChangeRunningState (targetState, action, replychannel) ->
-                        return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
-                    |   GetRunningState replychannel ->
-                        replychannel.Reply <| Response(state.RunningState)
-                        return! loop state
-                    |   GetEngineServices replychannel ->
-                        match state.EngineServices with
-                        |   None       -> replychannel.Reply <| ERROR(FileComponentException("This consumer is not connected with a route-engine"))
-                        |   Some value -> replychannel.Reply <| Response(value)
-                        return! loop state
+                    try
+                        match command with
+                        |   SetProducerHook (hook, replychannel) -> 
+                            logger.Debug "SetProducerHook"
+                            return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
+                        |   SetEngineServices (svc, replychannel) -> 
+                            logger.Debug "SetEngineServices"
+                            return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
+                        |   ChangeRunningState (targetState, action, replychannel) ->
+                            logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
+                            return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
+                        |   GetRunningState replychannel ->
+                            logger.Debug "GetRunningState"
+                            replychannel.Reply <| Response(state.RunningState)
+                            return! loop state
+                        |   GetEngineServices replychannel ->
+                            logger.Debug "GetEngineServices"
+                            match state.EngineServices with
+                            |   None       -> replychannel.Reply <| ERROR(FileComponentException("This consumer is not connected with a route-engine"))
+                            |   Some value -> replychannel.Reply <| Response(value)
+                            return! loop state
+                    with
+                    |   e -> logger.Error(sprintf "Uncaught exception: %A" e) 
+                    return! loop state
                 }
             loop initialState)
         newAgent.Start()
@@ -250,7 +274,6 @@ type File(props : Properties, initialState: State) as this =
         member this.Start() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Running, startFilePolling, replychannel)) |> ignore
         member this.Stop() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Stopped, stopFilePolling, replychannel)) |> ignore
         member this.SetProducerHook hook = agent.PostAndReply(fun replychannel -> SetProducerHook(hook, replychannel)) |> ignore
-        member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore
 
         member this.RunningState 
             with get () = 
@@ -258,6 +281,7 @@ type File(props : Properties, initialState: State) as this =
                 result.GetResponseOrRaise()
 
         member this.Validate() =
+            logger.Debug("Validate()")
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let fileListenerList = services.producerList<File>()
@@ -272,6 +296,8 @@ type File(props : Properties, initialState: State) as this =
                     if foundList.Length = 0 then None
                     else Some(foundList.Head)
                 )
+
+            logger.Debug(sprintf "Is valid: %b" invalid.IsNone)
             invalid.IsNone
 
     //  ===============================================  Consumer  ===============================================
@@ -280,10 +306,22 @@ type File(props : Properties, initialState: State) as this =
         File.WriteAllText(configUri.AbsolutePath, message.Body)
 
     member private this.Consume (message:Message) =
-        this.writeFile message
+        try
+            logger.Debug(sprintf "Write message to path: %s" props.Path)
+            this.writeFile message
+        with
+        |   e ->
+            logger.Error(sprintf "Error: %A" e)
+            reraise()
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver with get() = this :> IConsumerDriver
-    interface IConsumerDriver with
-        member self.GetConsumerHook with get() = this.Consume
 
+    interface IConsumerDriver with
+        member self.GetConsumerHook 
+            with get() = 
+                logger.Debug("GetConsumerHook.get()")
+                this.Consume
+
+    interface IRegisterEngine with
+        member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore

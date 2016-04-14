@@ -6,7 +6,7 @@ open General
 
 type DefinitionType =
     | ProcessStep of (General.Message -> General.Message)
-    | Consume     of (Message -> Message)
+    | Consume     of IConsumer * (Message -> Message)
     with
         static member ( =>= ) : l:DefinitionType * r:DefinitionType -> DefinitionType list
         static member ( =>= ) : l:DefinitionType * r:DefinitionType list -> DefinitionType list
@@ -24,6 +24,7 @@ type Route
         member internal Producer    : IProducer with get
         member internal SetProducer : IProducer -> Route
         member internal Route       : DefinitionType list with get
+        member internal Register    : IEngineServices -> unit
 and
     [<AbstractClass>]
     Producer =

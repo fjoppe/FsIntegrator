@@ -36,11 +36,14 @@ module EngineParts =
         abstract member Stop  : unit -> unit
         abstract member SetProducerHook : ProducerMessageHook -> unit
         abstract member RunningState : ProducerState with get
-        abstract member Register : IEngineServices -> unit
+//        abstract member Register : IEngineServices -> unit
         abstract member Validate : unit -> bool
 
     type IConsumerDriver = 
         abstract member GetConsumerHook : ConsumerMessageHook with get
+
+    type IRegisterEngine =
+        abstract member Register : IEngineServices -> unit
 
     type ``Provide a Producer Driver`` =
         //  This should retrieve the component's implementation for producing messages

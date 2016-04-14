@@ -69,10 +69,7 @@ type Operation =
 type SubRoute(props : Properties, initialState: State) as this = 
     inherit ProducerConsumer()
 
-    let logger = LogManager.GetLogger("debug"); 
-
-    /// Change this instance's state
-    let changeState (newState:State) = SubRoute(props, newState)
+    let logger = LogManager.GetLogger(this.GetType().FullName); 
 
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail state action =
@@ -85,6 +82,7 @@ type SubRoute(props : Properties, initialState: State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
+            logger.Debug(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     /// State Subroute
@@ -105,10 +103,12 @@ type SubRoute(props : Properties, initialState: State) as this =
             ),cancellationToken = state.Cancellation.Token            
         )
         agent.Start()
+        logger.Debug(sprintf "Started Subroute listener: %s" props.Name)
         {state with Driver = Some(agent)}
 
     let stopListening state = 
         state.Cancellation.Cancel()
+        logger.Debug(sprintf "Stopped Subroute listener: %s" props.Name)
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
 
@@ -131,15 +131,20 @@ type SubRoute(props : Properties, initialState: State) as this =
                     let! command = inbox.Receive()
                     match command with
                     |   SetProducerHook (hook, replychannel) -> 
+                        logger.Debug "SetProducerHook"
                         return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                     |   SetEngineServices (svc, replychannel) -> 
+                        logger.Debug "SetEngineServices"
                         return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                     |   ChangeRunningState (targetState, action, replychannel) ->
+                        logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
                         return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                     |   GetRunningState replychannel ->
+                        logger.Debug "GetRunningState"
                         replychannel.Reply <| Response(state.RunningState)
                         return! loop state
                     |   GetEngineServices replychannel ->
+                        logger.Debug "GetEngineServices"
                         match state.EngineServices with
                         |   None       -> replychannel.Reply <| ERROR(SubRouteException("This consumer is not connected with a route-engine"))
                         |   Some value -> replychannel.Reply <| Response(value)
@@ -165,7 +170,6 @@ type SubRoute(props : Properties, initialState: State) as this =
         member this.Start() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Running, startListening, replychannel)) |> ignore
         member this.Stop() =  agent.PostAndReply(fun replychannel -> ChangeRunningState(Stopped, stopListening, replychannel)) |> ignore
         member this.SetProducerHook hook = agent.PostAndReply(fun replychannel -> SetProducerHook(hook, replychannel)) |> ignore
-        member this.Register services =  agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore
 
         member this.RunningState 
             with get () = 
@@ -173,6 +177,7 @@ type SubRoute(props : Properties, initialState: State) as this =
                 result.GetResponseOrRaise()
 
         member this.Validate() =
+            logger.Debug("Validate()")
             match initialState.EngineServices with
             |   None        -> false
             |   Some engine ->
@@ -188,29 +193,43 @@ type SubRoute(props : Properties, initialState: State) as this =
                         if foundList.Length = 0 then None
                         else Some(foundList.Head)
                     )
+                logger.Debug(sprintf "Is valid: %b" invalid.IsNone)
                 invalid.IsNone
 
 
     //  Consumer
     member private this.Consume (message:Message) =
-        let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
-        let services = servicesResponse.GetResponseOrRaise()
-        let producerList = services.producerList<SubRoute>()
-        let producerCandidate = producerList |> List.tryFind(fun i -> i.Properties.Name = props.Name && i.State.RunningState = ProducerState.Running)
-        match producerCandidate with
-        |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" props.Name)
-                            else ()    // for now: ignore and continue
-        |   Some producer ->    
-                match producer.State.Driver with
-                |   None         -> raise <| SubRouteException(sprintf "ERROR: Subroute was found to be active, but does not have a driver for SubRoute '%s' - this is a framework problem, this may never occur." props.Name)
-                |   Some  driver ->
-                    let response = driver.PostAndReply(fun replyChannel -> (message, replyChannel))
-                    match response with
-                    |   None    -> ()
-                    |   Some e  -> raise e
+        try
+            logger.Debug(sprintf "Received message, writing to path: %s" props.Name)
+            let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
+            let services = servicesResponse.GetResponseOrRaise()
+            let producerList = services.producerList<SubRoute>()
+            let producerCandidate = producerList |> List.tryFind(fun i -> i.Properties.Name = props.Name && i.State.RunningState = ProducerState.Running)
+            match producerCandidate with
+            |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" props.Name)
+                             else 
+                                logger.Debug(sprintf "Missing active subroute '%s', ignore and continue" props.Name)
+                                ()    // for now: ignore and continue
+            |   Some producer ->    
+                    match producer.State.Driver with
+                    |   None         -> 
+                        let msg = sprintf "ERROR: Subroute was found to be active, but does not have a driver for SubRoute '%s' - this is a framework problem, this may never occur." props.Name
+                        logger.Error msg
+                        raise <| SubRouteException(msg)
+                    |   Some  driver ->
+                        let response = driver.PostAndReply(fun replyChannel -> (message, replyChannel))
+                        match response with
+                        |   None    -> ()
+                        |   Some e  -> raise e
+        with
+        |   e ->
+            logger.Error(sprintf "Error: %A" e)
+            reraise()
 
     interface ``Provide a Consumer Driver`` with
         override this.ConsumerDriver with get() = this :> IConsumerDriver
     interface IConsumerDriver with
         member self.GetConsumerHook with get() = this.Consume
 
+    interface IRegisterEngine with
+        member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore

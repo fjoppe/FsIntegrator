@@ -44,6 +44,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts", "{36B68559-7787-4409-B6F6-2744253B20FC}"
 	ProjectSection(SolutionItems) = preProject
 		src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx = src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx
+		src\TestScripts\nlog.config = src\TestScripts\nlog.config
 	EndProjectSection
 EndProject
 Global

@@ -10,12 +10,15 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
+#I "../../packages" 
 #r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important
 #r @"Camel.FTP/bin/Debug/Camel.FTP.dll"
 #r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
+#r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
+open NLog
 open Camel.Core
 open Camel.Producers
 open Camel.Consumers
@@ -23,6 +26,14 @@ open Camel.Core.General
 open Camel.Core.RouteEngine
 open Camel.FileTransfer
 open Camel.Queing
+
+//  Configure Nlog
+let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
+let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs/log.txt"))
+let xmlConfig = new NLog.Config.XmlLoggingConfiguration(nlogPath)
+xmlConfig.Variables.Item("logpath") <- Layouts.SimpleLayout(logfile)
+LogManager.Configuration <- xmlConfig
+
 
 //  Try this at home with your own configuration, for example: VirtualBox with Linux and ActiveMQ under ServiceMix
 let amqConnection = "tcp://TestRemoteVM:61616"         // hostname of the ActiveMQ server
@@ -76,6 +87,7 @@ RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 StartRoute id1
 StartRoute id2
 StartRoute id3
+RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 
 printfn "***************************"
 

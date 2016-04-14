@@ -17,7 +17,7 @@ module RouteEngine =
         |> List.fold(fun m dt ->
             match dt with
             |   ProcessStep func -> func m
-            |   Consume     func -> func m
+            |   Consume(consumerComponent, func) -> func m
         ) message 
         |> ignore
 
@@ -81,7 +81,7 @@ module RouteEngine =
                     | AddRoute route ->
                         if notExists(route.Id) then
                             let newRouteItem = RouteItem.Create route
-                            newRouteItem.ProducerDriver.Register(EngineServices(inbox))
+                            route.Register(EngineServices(inbox))
                             let newState = { state with Routes = state.Routes @ [newRouteItem]}
                             return! loop newState
                     | StartRoute id ->
