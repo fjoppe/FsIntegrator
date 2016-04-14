@@ -3,6 +3,8 @@
 open System
 open System.Reflection
 
+type Agent<'a>  = MailboxProcessor<'a>
+
 module General = 
     exception MessageFormatException of string
     

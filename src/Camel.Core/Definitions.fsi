@@ -44,6 +44,7 @@ and
         interface IConsumer
         new : unit -> ProducerConsumer
         static member (=>=) : p:IProducer * r:DefinitionType -> Route
+        static member (=>=) : p:IProducer * c:IConsumer -> Route
         static member (=>=) : r:DefinitionType * c:IConsumer -> DefinitionType list
         static member (=>=) : r:DefinitionType list * c:IConsumer -> DefinitionType list
 and

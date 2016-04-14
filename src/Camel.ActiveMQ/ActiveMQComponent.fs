@@ -1,16 +1,15 @@
 ﻿namespace Camel.Queing
 
 open System
-open Camel.Core
-open Camel.Core.General
-open Camel.Core.EngineParts
 open System.Threading
 open Apache.NMS
 open Apache.NMS.Util
 open Apache.NMS.ActiveMQ.Commands
 open NLog
+open Camel.Core
+open Camel.Core.General
+open Camel.Core.EngineParts
 open Camel.Utility
-
 
 exception ActiveMQComponentException of string
 
@@ -61,6 +60,7 @@ type Properties = {
         let convertedOptions = Properties.convertOptions options
         {convertedOptions with Destination = destination }    
 
+
 type State = {
         ProducerHook    : ProducerMessageHook option
         RunningState    : ProducerState
@@ -78,16 +78,25 @@ type State = {
     member this.SetEngineServices services = {this with EngineServices = services}
 
 
+type Operation =
+    |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
+    |   SetEngineServices of IEngineServices   * ActionAsyncResponse
+    |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
+    |   GetRunningState of FunctionsAsyncResponse<ProducerState>
+    |   GetSession of FunctionsAsyncResponse<ISession>
+
+
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
-type ActiveMQ(props : Properties, state : State) as this = 
+type ActiveMQ(props : Properties, initialState : State) as this = 
     inherit ProducerConsumer()
 
     let logger = LogManager.GetLogger("debug"); 
 
     //  Utility functions
     let changeState (newState:State) = ActiveMQ(props, newState)
-    let witProducerHookOrFail statement =
-        if state.ProducerHook.IsSome then statement
+
+    let witProducerHookOrFail state action =
+        if state.ProducerHook.IsSome then action()
         else raise (MissingMessageHook(sprintf "ActiveMQ consumer '%s' has no producer hook." props.Destination))
 
     let convertToActiveMQ (dt:DestinationType) : Apache.NMS.DestinationType =
@@ -104,19 +113,14 @@ type ActiveMQ(props : Properties, state : State) as this =
             | None      -> factory.CreateConnection()
         connection
 
-
-    member private this.Properties with get() = props
-    member private this.State with get() = state
-
-    member private this.changeRunningState targetState action = 
-        if state.RunningState = targetState then this :> IProducerDriver
+    let changeRunningState state targetState action = 
+        if state.RunningState = targetState then state
         else 
-            witProducerHookOrFail (
-                let intermediateState = action()
-                changeState {intermediateState with RunningState = targetState} :> IProducerDriver
-            )
+            let newState = witProducerHookOrFail state action
+            {newState with RunningState = targetState}
 
-    member this.startListening() =
+    //  Start listening for messages
+    let startListening state =
         let connection = getActiveMQConnection()
         let session = connection.CreateSession(AcknowledgementMode.ClientAcknowledge)
         let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
@@ -158,7 +162,7 @@ type ActiveMQ(props : Properties, state : State) as this =
         { state with Connection = Some connection; Session = Some session}
 
         
-    member this.stopListening() = 
+    let stopListening state = 
         state.Cancellation.Cancel()
         match state.Session with
         |   Some session  -> session.Close() ; session.Dispose()
@@ -173,7 +177,58 @@ type ActiveMQ(props : Properties, state : State) as this =
             let msg = "ActiveMQ has no Connection set, this may never occur!"
             logger.Error(msg)
             printfn "%s"msg
-        { state with Connection = None; Session = None; Cancellation = new CancellationTokenSource()}
+        { state with Connection = None; Session = None; Cancellation = new CancellationTokenSource()} // the CancellationToken is not reusable, so we make this for the next "start"
+
+
+    let agent = 
+        let newAgent = new Agent<Operation>(fun inbox ->
+            ///#region let actionReply (state:State) replychannel (action:unit->State) -> State   // executes action, responds via replychannel, on success returns changed "state"
+            let actionReply state (replychannel:ActionAsyncResponse) action : State =
+                try
+                    let newState = action()
+                    replychannel.Reply OK
+                    newState
+                with
+                |   e -> replychannel.Reply(ActionResponse.ERROR e)
+                         state
+            ///#endregion
+
+            ///#region let getOrCreate value action // gets data for value=Some(data) or creates with action() when value=None
+            let getOrCreate value action =
+                match value with
+                |   None        -> action()
+                |   Some data   -> data
+            ///#endregion
+
+            let rec loop (state:State) = 
+                async {
+                    try
+                        let! command = inbox.Receive()
+                        match command with
+                        |   SetProducerHook (hook, replychannel) -> 
+                            return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
+                        |   SetEngineServices (svc, replychannel) -> 
+                            return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
+                        |   ChangeRunningState (targetState, action, replychannel) ->
+                            return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
+                        |   GetRunningState replychannel ->
+                            replychannel.Reply <| Response(state.RunningState)
+                            return! loop state
+                        |   GetSession replychannel ->
+                            let connection = getOrCreate (state.Connection) (fun () -> getActiveMQConnection())
+                            let session = getOrCreate (state.Session) (fun () -> connection.CreateSession(AcknowledgementMode.ClientAcknowledge))
+                            replychannel.Reply <| Response(session)
+                            return! loop {state with Connection = Some(connection); Session = Some(session)}                                
+                    with
+                    |   e -> logger.Error(sprintf "Uncaught exception: %A" e)
+                    return! loop state
+                }
+            loop initialState)
+        newAgent.Start()
+        newAgent
+
+    member private this.Properties with get() = props
+    member private this.State with get() = initialState
 
 
     new(destination, optionList) =
@@ -186,31 +241,34 @@ type ActiveMQ(props : Properties, state : State) as this =
         override this.ProducerDriver with get() = this :> IProducerDriver
 
     interface IProducerDriver with
-        member this.Start() = this.changeRunningState Running (this.startListening)
-        member this.Stop() =  this.changeRunningState Stopped (this.stopListening)
-        member this.SetProducerHook hook = changeState { state with ProducerHook = Some(hook) } :> IProducerDriver
-        member this.RunningState with get () = state.RunningState
-        member this.Register services =  changeState (state.SetEngineServices (Some services)) :> IProducerDriver
+        member this.Start() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Running, startListening, replychannel)) |> ignore
+        member this.Stop() =  agent.PostAndReply(fun replychannel -> ChangeRunningState(Stopped, stopListening, replychannel)) |> ignore
+        member this.SetProducerHook hook = agent.PostAndReply(fun replychannel -> SetProducerHook(hook, replychannel)) |> ignore
+        member this.Register services =  agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore
+
+        member this.RunningState 
+            with get () = 
+                let result = agent.PostAndReply(fun replychannel -> GetRunningState(replychannel))
+                result.GetResponseOrRaise()
+
         member this.Validate() = true
+
 
     //  ===============================================  Consumer  ===============================================
     member private this.Consume (producer:IMessageProducer) (message:Camel.Core.General.Message) =        
         let messageToSend = producer.CreateTextMessage(message.Body)
         producer.Send(messageToSend)
 
+
     interface ``Provide a Consumer Driver`` with
-        override this.ConsumerDriver 
-            with get() = 
-                let connection = getActiveMQConnection()
-                ActiveMQ(props, {state with Connection = Some connection}) :> IConsumerDriver
+        override this.ConsumerDriver with get() = this :> IConsumerDriver
+
 
     interface IConsumerDriver with
             member self.GetConsumerHook
-                with get() = 
-                    match state.Connection with
-                    |   None -> raise(ActiveMQComponentException "No connection available, while getting consumer hook.")
-                    |   Some connection ->
-                        let session = connection.CreateSession(AcknowledgementMode.ClientAcknowledge)
-                        let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
-                        let producer = session.CreateProducer(destination)
-                        this.Consume producer
+                with get() =
+                    let sessionResponse = agent.PostAndReply(fun replychannel -> GetSession(replychannel))
+                    let session = sessionResponse.GetResponseOrRaise()
+                    let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
+                    let producer = session.CreateProducer(destination)
+                    this.Consume producer

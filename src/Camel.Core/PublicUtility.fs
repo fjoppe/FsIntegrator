@@ -1,7 +1,7 @@
 ﻿namespace Camel
 
+open System
 open FSharpx.Control
-
 
 module Utility =
     type RestrictedResourcePool = {
@@ -32,3 +32,21 @@ module Utility =
                             pool.AsyncAdd(token) |> Async.RunSynchronously
                     } |> Async.Start
                 
+    type ActionResponse =
+        |   OK
+        |   ERROR of Exception
+
+    type FunctionResponse<'a> =
+        |   Response of 'a
+        |   ERROR of Exception
+        with
+            member this.GetResponseOrRaise() =
+                match this with
+                |   ERROR e -> raise e
+                |   Response response -> response
+
+
+    type ActionAsyncResponse = AsyncReplyChannel<ActionResponse>
+    type FunctionsAsyncResponse<'a> = AsyncReplyChannel<FunctionResponse<'a>>
+
+    

@@ -17,7 +17,7 @@ open Camel.Producers
 open Camel.Consumers
 open Camel.Core.RouteEngine
 
-let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../../Testing/TestFileListener")
+let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFileListener")
 
 let maps = Map.empty.Add("value", "//test/message") // xpath mapping in message
 

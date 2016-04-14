@@ -1,9 +1,9 @@
 ﻿namespace Camel.Core
 
 open System
-open EngineParts
-open General 
 open NLog
+open Camel.Core.EngineParts
+open Camel.Core.General 
 
 [<AutoOpen>]
 module RouteEngine =
@@ -44,8 +44,8 @@ module RouteEngine =
     with
         static member Create (route:Route) =
             let producerDriver = route.Producer |> AsProducerDriver
-            let producerDriver = producerDriver.ProducerDriver.SetProducerHook (ExecuteRouteForMessage route.Route)
-            {Route = route; ProducerDriver = producerDriver}
+            producerDriver.ProducerDriver.SetProducerHook (ExecuteRouteForMessage route.Route)
+            {Route = route; ProducerDriver = producerDriver.ProducerDriver}
         member this.ChangeRunningState producerDriver =
             {this with ProducerDriver = producerDriver}
 
@@ -55,8 +55,6 @@ module RouteEngine =
     with
         static member Create() =
             {Routes = []}
-
-    type Agent<'a>  = MailboxProcessor<'a>
 
     type EngineServices(manager:Agent<Command>) =
         interface IEngineServices with
@@ -83,17 +81,17 @@ module RouteEngine =
                     | AddRoute route ->
                         if notExists(route.Id) then
                             let newRouteItem = RouteItem.Create route
-                            let newRouteItem = newRouteItem.ChangeRunningState (newRouteItem.ProducerDriver.Register(EngineServices(inbox)))
+                            newRouteItem.ProducerDriver.Register(EngineServices(inbox))
                             let newState = { state with Routes = state.Routes @ [newRouteItem]}
                             return! loop newState
                     | StartRoute id ->
                         if exists(id) then
-                            let newRoutes =  state.Routes |> List.map(fun r -> runStateMap id r (r.ProducerDriver.Start))
-                            return! loop {state with Routes = newRoutes}
+                            state.Routes |> List.filter(fun r -> r.Route.Id  = id) |> List.iter(fun r -> r.ProducerDriver.Start())
+                            return! loop state
                     | StopRoute id ->
                         if exists(id) then
-                            let newRoutes =  state.Routes |> List.map(fun r -> runStateMap id r (r.ProducerDriver.Stop))
-                            return! loop {state with Routes = newRoutes}
+                            state.Routes |> List.filter(fun r -> r.Route.Id  = id) |> List.iter(fun r -> r.ProducerDriver.Stop())
+                            return! loop state
                     | RouteInfoList replyChannel ->
                         let overview = state.Routes |> List.map(fun routeItem -> RouteInfo.Create routeItem.Route.Id routeItem.ProducerDriver.RunningState)
                         replyChannel.Reply overview

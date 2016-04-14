@@ -66,6 +66,8 @@ and
         interface IConsumer
         static member (=>=) (p:IProducer, r:DefinitionType) =
             Producer.CreateProducerRoutePart(p,r)
+        static member (=>=) (p:IProducer, c:IConsumer) =
+            Producer.CreateProducerRoutePart(p,Consumer.CreateConsumerRoutePart(c))
         static member (=>=) (r:DefinitionType, c:IConsumer) =
             r =>= Consumer.CreateConsumerRoutePart(c)
         static member (=>=) (r:DefinitionType list, c:IConsumer) =

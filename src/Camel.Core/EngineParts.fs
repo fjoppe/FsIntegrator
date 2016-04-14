@@ -32,11 +32,11 @@ module EngineParts =
 
 
     type IProducerDriver =
-        abstract member Start : unit -> IProducerDriver
-        abstract member Stop  : unit -> IProducerDriver
-        abstract member SetProducerHook : ProducerMessageHook -> IProducerDriver
+        abstract member Start : unit -> unit
+        abstract member Stop  : unit -> unit
+        abstract member SetProducerHook : ProducerMessageHook -> unit
         abstract member RunningState : ProducerState with get
-        abstract member Register : IEngineServices -> IProducerDriver
+        abstract member Register : IEngineServices -> unit
         abstract member Validate : unit -> bool
 
     type IConsumerDriver = 

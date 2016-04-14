@@ -39,40 +39,48 @@ let Process1 = To.Process(fun (m:Message) -> printfn "message received: %A" m.Bo
 let Process2 = To.Process(maps, fun mp m -> printfn "processing: %s" mp.["hi-message"])
 
 //  The start of the two routes
-let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../Testing/TestFullRoute") |> Path.GetFullPath
+let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFullRoute") |> Path.GetFullPath
 
 
-
-//  First route reads a file form the file system, and puts its content into a Queue on ActiveMQ
-let Route1 =
-    From.File fileListenerPath
+//  This route causes stability problems in the current code - it is a good test :)
+let Route1 = 
+    From.SubRoute "subroute"
     =>= Process1 
     =>= Process2
+
+
+//  This route reads a file form the file system, and puts its content into a Queue on ActiveMQ
+let Route2 =
+    From.File fileListenerPath
+    =>= To.SubRoute "subroute"
     =>= To.ActiveMQ("testQueue", [AMQOption.Connection(amqConnection); AMQOption.Credentials(amqCredentials)])
 
 
-//  Second route receives a message from ActiveMQ and stores it on an FTP folder
-let Route2 = 
+//  This route receives a message from ActiveMQ and stores it on an FTP folder
+let Route3 = 
     From.ActiveMQ("testQueue", [AMQOption.Connection(amqConnection); AMQOption.Credentials(amqCredentials)])
-    =>= Process1 
-    =>= Process2
+    =>= To.SubRoute "subroute"
     =>= To.Ftp(ftpStorePath, ftpConnection, [FtpOption.Credentials(ftpCredentials)])
 
 
 let id1 = Route1.Id
 let id2 = Route2.Id
+let id3 = Route3.Id
 
 RegisterRoute Route1
 RegisterRoute Route2
+RegisterRoute Route3
+
 
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 StartRoute id1
 StartRoute id2
+StartRoute id3
 
 printfn "***************************"
 
-StopRoute id2   //  closes activemq listener
-StartRoute id2  //  reactivates activemq listener
+StopRoute id3   //  closes activemq listener
+StartRoute id3  //  reactivates activemq listener
 
 printfn "***************************"
 
