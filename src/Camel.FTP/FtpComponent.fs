@@ -122,8 +122,6 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type Ftp(props : Properties, initialState : State) as this = 
-    inherit ProducerConsumer()
-
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
     /// Do "action" when there is a ProducerHook, else raise exception
@@ -286,6 +284,8 @@ type Ftp(props : Properties, initialState : State) as this =
 
 
     //  =============================================== Producer ===============================================
+    interface IProducer
+
     interface ``Provide a Producer Driver`` with
         override this.ProducerDriver with get() = this :> IProducerDriver
 
@@ -320,6 +320,8 @@ type Ftp(props : Properties, initialState : State) as this =
 
 
     //  ===============================================  Consumer  ===============================================
+    interface IConsumer
+
     member private this.writeFile (message:Message) =      
         try
             logger.Debug(sprintf "Write message to path: %s" props.Path)

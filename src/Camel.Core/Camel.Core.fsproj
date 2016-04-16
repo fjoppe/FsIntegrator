@@ -66,8 +66,10 @@
     <Compile Include="General.fs" />
     <Compile Include="InternalUtility.fs" />
     <Compile Include="EngineParts.fs" />
+    <Compile Include="Macros.fs" />
     <Compile Include="Definitions.fsi" />
     <Compile Include="Definitions.fs" />
+    <Compile Include="DefinitionOperators.fs" />
     <Compile Include="RouteEngine.fsi" />
     <Compile Include="RouteEngine.fs" />
     <Compile Include="PublicUtility.fs" />
@@ -81,7 +83,6 @@
     <Compile Include="Producers.fs" />
     <Compile Include="Consumers.fsi" />
     <Compile Include="Consumers.fs" />
-    <None Include="FailFast - File Listener.fsx" />
     <None Include="FailFast - FSMonad.fsx" />
     <None Include="FailFast - Resource Pool.fsx" />
     <Content Include="packages.config" />

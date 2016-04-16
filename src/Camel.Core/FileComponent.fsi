@@ -1,10 +1,11 @@
 ﻿namespace Camel.FileHandling
 
-open Camel.Core
-open Camel.Core.General
 open System.IO
 open System.Timers
 open FSharp.Data.UnitSystems.SI.UnitSymbols
+open Camel.Core
+open Camel.Core.EngineParts
+open Camel.Core.General
 
 exception FileComponentException of string
 
@@ -27,7 +28,10 @@ type FileOption =
 
 type File =
     class
-        inherit ProducerConsumer
+//        inherit ProducerConsumer
+        interface IProducer
+        interface IConsumer
+        interface IRegisterEngine
         internal new : string * FileOption list -> File
     end
 

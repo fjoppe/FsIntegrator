@@ -68,8 +68,6 @@
     <Compile Include="Producers.fs" />
     <Compile Include="Consumers.fsi" />
     <Compile Include="Consumers.fs" />
-    <None Include="FailFast - FTP Listener.fsx" />
-    <None Include="FailFast.fsx" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

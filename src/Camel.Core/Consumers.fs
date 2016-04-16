@@ -1,21 +1,48 @@
 ﻿namespace Camel
 
+open System.IO
+open System.Xml.XPath
 open Camel.Core
 open Camel.Core.General
 open Camel.FileHandling
+open Camel.FileHandling.FileSystem
 open Camel.SubRoute
+open Camel.MessageOperations
+
 
 module FileConsumerDefaults =
-    let afterSuccessDefault = fun _ -> FSScript.Empty
-
-    let afterErrorDefault  = fun _ -> FSScript.Empty
-
+    let afterSuccessDefault = NoFileScript
+    let afterErrorDefault  = NoFileScript
     let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
 
 module SubRouteConsumerDefaults =
     let defaultConsumerOptions = []
 
-module Consumers=
+module ConsumersInternal =
+    let substituteAllXPath<'a when 'a : comparison> (map:Map<'a,string>) msg =
+        let xpath = XPathDocument(new StringReader(msg)).CreateNavigator()
+        map 
+        |> Map.toSeq 
+        |> Seq.map(fun (k, v) -> k, InternalUtility.substituteSingleXPath xpath v)
+        |> Map.ofSeq
+
+
+    let CallWithMapping mapper f (msg:General.Message) =
+        let mapping = substituteAllXPath mapper msg.Body
+        f mapping msg
+
+    let CallWithMacroMapping (mapper:Map<'a, StringMacro>) f (msg:General.Message) =
+        let mapping = 
+            mapper
+            |> Map.toSeq
+            |> Seq.map(fun (k,v) -> k, v.Substitute msg)
+            |> Map.ofSeq
+        f mapping msg
+
+    let CallAndReturnInput f m = f m ; m    // returns m
+
+
+module Consumers =
     type To = struct end
     type To with
         /// Store a message's body in a File
@@ -36,17 +63,27 @@ module Consumers=
 
         /// Process a Message with a custom function
         static member Process (func : Message -> unit) = 
-            ProcessStep(InternalUtility.CallAndReturnInput func)
+            ProcessStep(ConsumersInternal.CallAndReturnInput func)
 
         /// Process a Message with a custom function
         static member Process (func : Message -> Message) = 
             ProcessStep(func)
 
         /// Process a Message with a custom function, using an XPath mapping
+        static member Process<'a when 'a : comparison> (mapper : Map<'a, StringMacro>, func : Map<'a,string> -> Message -> Message) =
+            ProcessStep(ConsumersInternal.CallWithMacroMapping mapper func)
+
+        /// Process a Message with a custom function, using an XPath mapping
+        static member Process<'a when 'a : comparison> (mapper : Map<'a, StringMacro>, func : Map<'a,string> -> Message -> unit) =
+            ProcessStep(ConsumersInternal.CallAndReturnInput(ConsumersInternal.CallWithMacroMapping mapper func))
+
+        /// Process a Message with a custom function, using an XPath mapping
         static member Process<'a when 'a : comparison> (mapper : Map<'a,string>, func : Map<'a,string> -> Message -> Message) =
-            ProcessStep(InternalUtility.CallWithMapping mapper func)
+            let macroMapper = mapper |> Map.toSeq |> Seq.map(fun (k,v) -> k, XPath(v)) |> Map.ofSeq
+            To.Process(macroMapper, func)
 
         /// Process a Message with a custom function, using an XPath mapping
         static member Process<'a when 'a : comparison> (mapper : Map<'a,string>, func : Map<'a,string> -> Message -> unit) =
-            ProcessStep(InternalUtility.CallAndReturnInput(InternalUtility.CallWithMapping mapper func))
+            let macroMapper = mapper |> Map.toSeq |> Seq.map(fun (k,v) -> k, XPath(v)) |> Map.ofSeq
+            To.Process(macroMapper, func)
 

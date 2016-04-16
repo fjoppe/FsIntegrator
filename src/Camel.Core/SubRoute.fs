@@ -1,12 +1,12 @@
 ﻿namespace Camel.SubRoute
 
 open System
+open System.Threading
+open NLog
 open Camel.Core
 open Camel.Core.General
 open Camel.Core.EngineParts
 open Camel.Utility
-open System.Threading
-open NLog
 
 exception SubRouteException of string
 
@@ -68,8 +68,6 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type SubRoute(props : Properties, initialState: State) as this = 
-    inherit ProducerConsumer()
-
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
     /// Do "action" when there is a ProducerHook, else raise exception
@@ -172,7 +170,9 @@ type SubRoute(props : Properties, initialState: State) as this =
         SubRoute(options, fileState)
 
 
-    //  Producer
+    //  =============================================== Producer ===============================================
+    interface IProducer
+
     interface ``Provide a Producer Driver`` with
         override this.ProducerDriver with get() = this :> IProducerDriver
     interface IProducerDriver with        
@@ -206,7 +206,8 @@ type SubRoute(props : Properties, initialState: State) as this =
                 invalid.IsNone
 
 
-    //  Consumer
+    //  ===============================================  Consumer  ===============================================
+    interface IConsumer
     member private this.Consume (message:Message) =
         try
             logger.Debug(sprintf "Received message, writing to path: %s" props.Name)

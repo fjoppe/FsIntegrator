@@ -36,6 +36,7 @@ module RouteEngine =
         |   RouteInfoList  of AsyncReplyChannel<RouteInfo list>
         |   RouteList      of AsyncReplyChannel<Route list>
 
+    
     type RouteItem = {
         Route          : Route
         ProducerDriver : IProducerDriver
@@ -71,7 +72,7 @@ module RouteEngine =
                 else route
 
             let rec loop state = async {
-                let exists(id) = state.Routes |> List.tryFind(fun e -> e.Route.Id = id) <> None
+                let exists(id:Guid) = state.Routes |> List.tryFind(fun e -> e.Route.Id = id) <> None
                 let notExists(id) = not(exists(id))
 
                 let! command = inbox.Receive()

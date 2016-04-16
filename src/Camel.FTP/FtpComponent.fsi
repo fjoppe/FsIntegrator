@@ -1,9 +1,10 @@
 ﻿namespace Camel.FileTransfer
 
-open Camel.Core
-open Camel.Core.General
 open System
 open FSharp.Data.UnitSystems.SI.UnitSymbols
+open Camel.Core
+open Camel.Core.EngineParts
+open Camel.Core.General
 
 exception FtpComponentException of string
 
@@ -42,6 +43,8 @@ type FtpOption =
 
 type Ftp = 
     class
-        inherit ProducerConsumer
+        interface IProducer
+        interface IConsumer
+        interface IRegisterEngine 
         internal new : string * string * FtpOption list -> Ftp
     end

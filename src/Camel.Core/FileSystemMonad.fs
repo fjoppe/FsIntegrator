@@ -60,6 +60,8 @@ type FSBuilder() =
     member this.MoveDir((fs:FSScript), source, target) =
         fs.Add(MoveDir(source, target))
 
-module FileSystem=  
+module FileSystem =  
     let fs = FSBuilder()
+
+    let NoFileScript = fun _ -> FSScript.Empty
 

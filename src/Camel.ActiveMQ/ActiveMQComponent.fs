@@ -88,7 +88,6 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type ActiveMQ(props : Properties, initialState : State) as this = 
-    inherit ProducerConsumer()
 
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
@@ -247,6 +246,8 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         ActiveMQ(options, componentState)
 
     //  =============================================== Producer ===============================================
+    interface IProducer
+
     interface ``Provide a Producer Driver`` with
         override this.ProducerDriver with get() = this :> IProducerDriver
 
@@ -264,6 +265,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
 
     //  ===============================================  Consumer  ===============================================
+    interface IConsumer
     member private this.Consume (producer:IMessageProducer) (message:Camel.Core.General.Message) =        
         try
             logger.Debug(sprintf "Send message to %s - %A" props.Destination props.DestinationType)

@@ -16,6 +16,7 @@ open Camel.Core
 open Camel.Producers
 open Camel.Consumers
 open Camel.Core.RouteEngine
+open Camel.Core.Definitions
 
 let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFileListener")
 
@@ -25,7 +26,7 @@ let Process1 = To.Process(fun m -> printfn "message received: %A" m.Body)
 let Process2 = To.Process(maps, (fun mp m -> printfn "processing: %s" mp.["value"]))
 
 
-let route = (From.File fileListenerPath) =>= Process1 =>= Process2
+let route = From.File fileListenerPath =>= Process1 =>= Process2
 let id = route.Id
 
 RegisterRoute route

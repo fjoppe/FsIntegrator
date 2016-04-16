@@ -2,6 +2,7 @@
 
 open System
 open Camel.Core
+open Camel.Core.EngineParts
 open Camel.Core.General
 
 exception ActiveMQComponentException of string
@@ -25,7 +26,9 @@ type AMQOption =
 
 type ActiveMQ = 
     class
-        inherit ProducerConsumer
+        interface IProducer
+        interface IConsumer
+        interface IRegisterEngine
         internal new : string * AMQOption list -> ActiveMQ
     end
 

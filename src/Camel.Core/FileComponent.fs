@@ -111,7 +111,6 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type File(props : Properties, initialState: State) as this = 
-    inherit ProducerConsumer()
 
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
@@ -267,7 +266,9 @@ type File(props : Properties, initialState: State) as this =
         File(options, fileState)
 
 
+
     //  =============================================== Producer ===============================================
+    interface IProducer
     interface ``Provide a Producer Driver`` with
         override this.ProducerDriver with get() = this :> IProducerDriver
     interface IProducerDriver with
@@ -301,6 +302,8 @@ type File(props : Properties, initialState: State) as this =
             invalid.IsNone
 
     //  ===============================================  Consumer  ===============================================
+    interface IConsumer
+
     member private this.writeFile (message:Message) =
         let configUri = new Uri(props.Path)
         File.WriteAllText(configUri.AbsolutePath, message.Body)

@@ -32,6 +32,7 @@ open Camel.Core.General
 open Camel.Core.RouteEngine
 open Camel.FileTransfer
 open Camel.Queing
+open Camel.Core.Definitions
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
@@ -62,14 +63,14 @@ let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/Test
 //  This sub route is re-used in both other routes
 let Route1 = 
     From.SubRoute "subroute"
-    =>= Process1 
+    =>= Process1
     =>= Process2
 
 
 //  This route reads a file form the file system, and puts its content into a Queue on ActiveMQ
 let Route2 =
-    From.File fileListenerPath
-    =>= To.SubRoute "subroute"
+    From.File(fileListenerPath)
+    =>= To.SubRoute("subroute")
     =>= To.ActiveMQ("testQueue", [AMQOption.Connection(amqConnection); AMQOption.Credentials(amqCredentials)])
 
 
