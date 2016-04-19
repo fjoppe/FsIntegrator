@@ -32,6 +32,8 @@ type Operators = Operation with
     (*  Route operations *)
     static member FlowOperator (Operation, l:Route, r:DefinitionType) = l.SetRoute <| l.Route @ [r]
     static member FlowOperator (Operation, l:Route, r:IConsumer) = l.SetRoute <| l.Route @ [Operators.CreateConsumerRoutePart(r)]
+    static member FlowOperator (Operation, l:ConditionalRoute, r:DefinitionType) = l.SetRoute <| l.Route @ [r]
+    static member FlowOperator (Operation, l:ConditionalRoute, r:IConsumer) = l.SetRoute <| l.Route @ [Operators.CreateConsumerRoutePart(r)]
 
     (*  Producer operations *)
     static member FlowOperator (Operation, p:IProducer, r:DefinitionType) = Operators.CreateProducerRoutePart(p,r)

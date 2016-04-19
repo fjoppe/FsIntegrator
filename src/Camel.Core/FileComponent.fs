@@ -8,8 +8,9 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 open FSharpx.Control
 open NLog
 open Camel.Core
-open Camel.Core.General
 open Camel.Core.EngineParts
+open Camel.Core.General
+open Camel.Core.MessageOperations
 open Camel.Utility
 open Camel.FileHandling.FileSystem
 
@@ -44,10 +45,14 @@ type Options = {
     }
 
 
+type PathType =
+    |   Fixed       of string
+    |   Evaluate    of StringMacro
+
 /// Contains "File" configuration
 type Properties = {
         Id           : Guid
-        Path         : string
+        Path         : PathType
         Options      : Options
     }
     with
@@ -114,10 +119,18 @@ type File(props : Properties, initialState: State) as this =
 
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
+    let getPath (message: Message option) =
+        match props.Path with
+        |   Fixed str   -> str
+        |   Evaluate strmacro ->
+            match message with
+            |   Some    (msg) -> strmacro.Substitute(msg)
+            |   None          -> raise <| FileComponentException("Cannot evaluate StringMacro without message")
+
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail state action =
         if state.ProducerHook.IsSome then action()
-        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." props.Path))
+        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." (getPath None)))
 
     /// Change the running state of this instance
     let changeRunningState state targetState (action: unit -> State) = 
@@ -129,7 +142,7 @@ type File(props : Properties, initialState: State) as this =
 
     /// State File polling
     let startFilePolling state = 
-        let configUri = new Uri(props.Path)
+        let configUri = new Uri(getPath None)
 
         if not(Directory.Exists(configUri.AbsolutePath)) then
             if props.Options.CreateIfNotExists then
@@ -200,14 +213,14 @@ type File(props : Properties, initialState: State) as this =
         }
         state.Timer.Start()
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)
-        logger.Debug(sprintf "Started FileListener for path: %s" props.Path)
+        logger.Debug(sprintf "Started FileListener for path: %s" (getPath None))
         state
 
 
     let stopFilePolling state = 
         state.Timer.Stop()
         state.Cancellation.Cancel()
-        logger.Debug(sprintf "Stopped FileListener for path: %s" props.Path)
+        logger.Debug(sprintf "Stopped FileListener for path: %s" (getPath None))
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     let agent = 
@@ -259,12 +272,16 @@ type File(props : Properties, initialState: State) as this =
     member private this.Properties with get() = props
     member private this.State with get() = initialState
 
-
-    new(path, optionList) =
+    new(path : PathType, optionList : FileOption list) =
         let options = Properties.Create path optionList
         let fileState = State.Create <| options.Options
         File(options, fileState)
 
+    new(path : string, optionList : FileOption list) =
+        File((Fixed path), optionList)
+
+    new(path : StringMacro, optionList : FileOption list) =
+        File((Evaluate path), optionList)
 
 
     //  =============================================== Producer ===============================================
@@ -286,32 +303,34 @@ type File(props : Properties, initialState: State) as this =
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let fileListenerList = services.producerList<File>()
-            let invalid = 
-                fileListenerList |>  List.tryPick(fun fp -> 
-                    let refId = fp.Properties.Id
-                    let refPath = fp.Properties.Path
-                    let foundList = 
-                        fileListenerList 
-                        |> List.filter(fun i -> i.Properties.Id <> refId)
-                        |> List.filter(fun i -> i.Properties.Path = refPath)
-                    if foundList.Length = 0 then None
-                    else Some(foundList.Head)
-                )
+            match props.Path with
+            |   Fixed propertiesPath ->
+                let invalid = 
+                    fileListenerList 
+                    |> List.filter( fun e -> e.Properties.Id <> props.Id)
+                    |> List.exists(fun fp ->
+                        let refId = fp.Properties.Id
+                        match fp.Properties.Path with
+                        | Fixed refPath -> (refPath = propertiesPath)
+                        | _ -> false)
+                logger.Debug(sprintf "Is valid: %b" <| not(invalid))
+                not(invalid)
+            |   _ -> true
 
-            logger.Debug(sprintf "Is valid: %b" invalid.IsNone)
-            invalid.IsNone
+
 
     //  ===============================================  Consumer  ===============================================
     interface IConsumer
 
-    member private this.writeFile (message:Message) =
-        let configUri = new Uri(props.Path)
+    member private this.writeFile (path:string) (message:Message) =
+        let configUri = new Uri(path)
         File.WriteAllText(configUri.AbsolutePath, message.Body)
 
     member private this.Consume (message:Message) =
         try
-            logger.Debug(sprintf "Write message to path: %s" props.Path)
-            this.writeFile message
+            let path = getPath (Some message)
+            logger.Debug(sprintf "Write message to path: %s" path)
+            this.writeFile path message
             message
         with
         |   e ->

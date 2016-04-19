@@ -6,12 +6,14 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 open Camel.Core
 open Camel.Core.EngineParts
 open Camel.Core.General
+open Camel.Core.MessageOperations
 
 exception FileComponentException of string
 
 type FileMessageHeader = {
         FileInfo : FileInfo
     }
+
 
 type FileOption =
     /// Specifies the minimum interval for which the file listener polls the specified endpoint. Default = 10 sec
@@ -28,10 +30,10 @@ type FileOption =
 
 type File =
     class
-//        inherit ProducerConsumer
         interface IProducer
         interface IConsumer
         interface IRegisterEngine
         internal new : string * FileOption list -> File
+        internal new : StringMacro * FileOption list -> File
     end
 

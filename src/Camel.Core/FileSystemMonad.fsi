@@ -47,4 +47,5 @@ type FSBuilder =
 module FileSystem =  
     val fs : FSBuilder
 
+    /// Empty File Script (do nothing)
     val NoFileScript<'a> : 'a -> FSScript

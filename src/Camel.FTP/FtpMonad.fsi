@@ -50,3 +50,5 @@ type FtpBuilder =
 module RemoteFileSystem =  
     val ftp : FtpBuilder
 
+    /// Empty FTP Script (do nothing)
+    val NoFTPScript : FtpScript

@@ -1,6 +1,7 @@
 ﻿namespace Camel
 
 open Camel.Core
+open Camel.Core.MessageOperations
 open Camel.Queing
 
 module ActiveMQConsumerDefaults =
@@ -11,7 +12,13 @@ module Consumers=
     type To = struct end
     type To with
         /// Send Message to an ActiveMQ destination. A destination is a topic or queue.
-        static member ActiveMQ(destination) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions) :> IConsumer
+        static member ActiveMQ(destination : string) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions) :> IConsumer
 
         /// Send Message to an ActiveMQ destination. A destination is a topic or queue.
-        static member ActiveMQ(destination, options) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
+        static member ActiveMQ(destination : string, options) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
+
+        /// Send Message to an ActiveMQ destination. A destination is a topic or queue.
+        static member ActiveMQ(destination : StringMacro) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions) :> IConsumer
+
+        /// Send Message to an ActiveMQ destination. A destination is a topic or queue.
+        static member ActiveMQ(destination : StringMacro, options) = ActiveMQ(destination, ActiveMQConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer

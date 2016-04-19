@@ -5,6 +5,7 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 open Camel.Core
 open Camel.Core.EngineParts
 open Camel.Core.General
+open Camel.Core.MessageOperations
 
 exception FtpComponentException of string
 
@@ -47,4 +48,5 @@ type Ftp =
         interface IConsumer
         interface IRegisterEngine 
         internal new : string * string * FtpOption list -> Ftp
+        internal new : StringMacro * string * FtpOption list -> Ftp
     end

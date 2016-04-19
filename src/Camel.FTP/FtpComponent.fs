@@ -11,6 +11,7 @@ open NLog
 open Camel.Core
 open Camel.Core.EngineParts
 open Camel.Core.General
+open Camel.Core.MessageOperations
 open Camel.FileTransfer.RemoteFileSystem
 open Camel.Utility
 
@@ -59,10 +60,14 @@ type Options = {
         ConcurrentTasks : int
     }
 
+type PathType =
+    |   Fixed       of string
+    |   Evaluate    of StringMacro
+
 
 type Properties = {
         Id          : Guid
-        Path        : string
+        Path        : PathType
         Connection  : string
         Options     : Options
     }
@@ -122,12 +127,21 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type Ftp(props : Properties, initialState : State) as this = 
+    
     let logger = LogManager.GetLogger(this.GetType().FullName); 
+
+    let getPath (message: Message option) =
+        match props.Path with
+        |   Fixed str   -> str
+        |   Evaluate strmacro ->
+            match message with
+            |   Some    (msg) -> strmacro.Substitute(msg)
+            |   None          -> raise <| FtpComponentException("Cannot evaluate StringMacro without message")
 
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail state action =
         if state.ProducerHook.IsSome then action()
-        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." props.Path))
+        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." (getPath None)))
 
     let getFtpClient() =
         let connectUri = 
@@ -199,7 +213,7 @@ type Ftp(props : Properties, initialState : State) as this =
 
             let sendToRoute = state.ProducerHook .Value
             try
-                client.GetListing(props.Path) |> List.ofArray
+                client.GetListing(getPath None) |> List.ofArray
                 |> List.map(
                     fun ftpFile ->
                         let name, path = ftpFile.Name, ftpFile.FullName
@@ -216,7 +230,7 @@ type Ftp(props : Properties, initialState : State) as this =
         }
         state.Timer.Start()
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)
-        logger.Debug(sprintf "Started FTP Listener for path: %s" props.Path)
+        logger.Debug(sprintf "Started FTP Listener for path: %s" (getPath None))
         { state with FtpClient = client }
 
 
@@ -224,7 +238,7 @@ type Ftp(props : Properties, initialState : State) as this =
         state.Timer.Stop()
         state.Cancellation.Cancel()
         state.FtpClient.Disconnect()
-        logger.Debug(sprintf "Stopped FTP Listener for path: %s" props.Path)
+        logger.Debug(sprintf "Stopped FTP Listener for path: %s" (getPath None))
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     let agent = 
@@ -277,11 +291,16 @@ type Ftp(props : Properties, initialState : State) as this =
     member private this.State with get() = initialState
 
 
-    new(path, connection, optionList) =
+    new(path, connection, optionList : FtpOption list) =
         let options = Properties.Create path connection optionList
         let fileState = State.Create <| options.Options
         Ftp(options, fileState)
 
+    new(path : string, connection : string, optionList: FtpOption list) =
+        Ftp((Fixed path), connection, optionList)
+
+    new(path : StringMacro, connection : string, optionList: FtpOption list) =
+        Ftp((Evaluate path), connection, optionList)
 
     //  =============================================== Producer ===============================================
     interface IProducer
@@ -305,18 +324,20 @@ type Ftp(props : Properties, initialState : State) as this =
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let ftpListenerList = services.producerList<Ftp>()
-            let invalid = 
-                ftpListenerList |>  List.tryPick(fun ftp -> 
-                    let refId = ftp.Properties.Id
-                    let refPath = ftp.Properties.Path
-                    let foundList = 
-                        ftpListenerList 
-                        |> List.filter(fun i -> i.Properties.Id <> refId)
-                        |> List.filter(fun i -> i.Properties.Path = refPath)
-                    if foundList.Length = 0 then None
-                    else Some(foundList.Head)
-                )
-            invalid.IsNone
+
+            match props.Path with
+            |   Fixed propertiesPath ->
+                let invalid =
+                    ftpListenerList
+                    |>  List.filter(fun e -> e.Properties.Id <> props.Id)
+                    |>  List.exists(fun fp ->
+                        match fp.Properties.Path with
+                        |   Fixed refPath -> propertiesPath = refPath
+                        |   _ -> false
+                    )
+                logger.Debug(sprintf "Is valid: %b" <| not(invalid))
+                not(invalid)
+            |   _ -> true
 
 
     //  ===============================================  Consumer  ===============================================
@@ -324,9 +345,10 @@ type Ftp(props : Properties, initialState : State) as this =
 
     member private this.writeFile (message:Message) =      
         try
-            logger.Debug(sprintf "Write message to path: %s" props.Path)
+            let path = getPath (Some message)
+            logger.Debug(sprintf "Write message to path: %s" path)
             let bufferToWrite = System.Text.Encoding.UTF8.GetBytes(message.Body)
-            use targetStream = initialState.FtpClient.OpenWrite(props.Path) :?> FtpDataStream
+            use targetStream = initialState.FtpClient.OpenWrite(path) :?> FtpDataStream
             targetStream.Write(bufferToWrite, 0, bufferToWrite.Length)
             let reply = targetStream.Close()
             if not(reply.Success) then

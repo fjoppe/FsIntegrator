@@ -46,14 +46,14 @@ module Producers =
     type From = struct end
     type From with
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member File(path)          = File(path, FileProducerDefaults.defaultProducerOptions)
+        static member File(path : string) = File(path, FileProducerDefaults.defaultProducerOptions)
 
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member File(path, options) = File(path, FileProducerDefaults.defaultProducerOptions @ options)
+        static member File(path : string, options) = File(path, FileProducerDefaults.defaultProducerOptions @ options)
  
         /// Create a Subroute, which is identified by the specified name
-        static member SubRoute(name)          = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions)
+        static member SubRoute(name : string) = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions)
 
         /// Create a Subroute, which is identified by the specified name
-        static member SubRoute(name, options) = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions @ options)
+        static member SubRoute(name : string, options) = SubRoute(name, SubRouteProducerDefaults.defaultProducerOptions @ options)
 

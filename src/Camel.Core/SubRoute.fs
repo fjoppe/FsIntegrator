@@ -6,6 +6,7 @@ open NLog
 open Camel.Core
 open Camel.Core.General
 open Camel.Core.EngineParts
+open Camel.Core.MessageOperations
 open Camel.Utility
 
 exception SubRouteException of string
@@ -18,10 +19,14 @@ type Options = {
      FailForMissingActiveSubRoute : bool
 }
 
+type PathType =
+    |   Fixed       of string
+    |   Evaluate    of StringMacro
+
 /// Contains "SubRoute" configuration
 type Properties = {
         Id           : Guid
-        Name         : string
+        Name         : PathType
         Options      : Options
     }
     with
@@ -68,12 +73,21 @@ type Operation =
 
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type SubRoute(props : Properties, initialState: State) as this = 
+
     let logger = LogManager.GetLogger(this.GetType().FullName); 
+
+    let getName (message: Message option) =
+        match props.Name with
+        |   Fixed str   -> str
+        |   Evaluate strmacro ->
+            match message with
+            |   Some    (msg) -> strmacro.Substitute(msg)
+            |   None          -> raise <| SubRouteException("Cannot evaluate StringMacro without message")
 
     /// Do "action" when there is a ProducerHook, else raise exception
     let witProducerHookOrFail state action =
         if state.ProducerHook.IsSome then action()
-        else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." props.Name))
+        else raise (MissingMessageHook(sprintf "SubRoute with name '%s' has no producer hook." (getName None)))
 
 
     /// Change the running state of this instance
@@ -103,12 +117,12 @@ type SubRoute(props : Properties, initialState: State) as this =
             ),cancellationToken = state.Cancellation.Token            
         )
         agent.Start()
-        logger.Debug(sprintf "Started Subroute listener: %s" props.Name)
+        logger.Debug(sprintf "Started Subroute listener: %s" (getName None))
         {state with Driver = Some(agent)}
 
     let stopListening state = 
         state.Cancellation.Cancel()
-        logger.Debug(sprintf "Stopped Subroute listener: %s" props.Name)
+        logger.Debug(sprintf "Stopped Subroute listener: %s" (getName None))
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
 
@@ -152,7 +166,7 @@ type SubRoute(props : Properties, initialState: State) as this =
                     |   GetDriver replychannel ->
                         logger.Debug "GetDriver"
                         match state.Driver with
-                        |   None        -> replychannel.Reply <| ERROR(SubRouteException(sprintf "ERROR: Subroute does not have an active listener for '%s' - this is a framework problem, this may never occur." props.Name))
+                        |   None        -> replychannel.Reply <| ERROR(SubRouteException(sprintf "ERROR: Subroute does not have an active listener for '%s' - this is a framework problem, this may never occur." (getName None)))
                         |   Some driver -> replychannel.Reply <| Response(driver)
                         return! loop state
                 }
@@ -164,11 +178,16 @@ type SubRoute(props : Properties, initialState: State) as this =
     member private this.State with get() = initialState
     member private this.Agent with get() = agent
 
-    new(path, optionList) =
+    new(path, optionList : SubRouteOption list) =
         let options = Properties.Create path optionList
         let fileState = State.Create <| options.Options
         SubRoute(options, fileState)
 
+    new(path, optionList : SubRouteOption list) =
+        SubRoute((Fixed path), optionList)
+
+    new(path, optionList : SubRouteOption list) =
+        SubRoute((Evaluate path), optionList)
 
     //  =============================================== Producer ===============================================
     interface IProducer
@@ -191,26 +210,29 @@ type SubRoute(props : Properties, initialState: State) as this =
             |   None        -> false
             |   Some engine ->
                 let producerList = engine.producerList<SubRoute>()
-                let invalid = 
-                    producerList |>  List.tryPick(fun fp -> 
-                        let refId = fp.Properties.Id
-                        let refName = fp.Properties.Name
-                        let foundList = 
-                            producerList 
-                            |> List.filter(fun i -> i.Properties.Id <> refId)
-                            |> List.filter(fun i -> i.Properties.Name = refName)
-                        if foundList.Length = 0 then None
-                        else Some(foundList.Head)
-                    )
-                logger.Debug(sprintf "Is valid: %b" invalid.IsNone)
-                invalid.IsNone
+
+                let invalid =
+                    match props.Name with
+                    |   Fixed propertiesName ->
+                        producerList
+                        |>  List.filter(fun e -> e.Properties.Id <> props.Id)
+                        |>  List.exists(fun fp ->
+                            match fp.Properties.Name with
+                            |   Fixed refName   -> propertiesName = refName
+                            |   _ -> false
+                            )
+                    |   _ -> true
+                logger.Debug(sprintf "Is valid: %b" (not(invalid)))
+                not(invalid)
+
 
 
     //  ===============================================  Consumer  ===============================================
     interface IConsumer
     member private this.Consume (message:Message) =
         try
-            logger.Debug(sprintf "Received message, writing to path: %s" props.Name)
+            let localName = getName (Some message)
+            logger.Debug(sprintf "Received message, writing to path: %s" localName)
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let producerList = services.producerList<SubRoute>()
@@ -218,11 +240,13 @@ type SubRoute(props : Properties, initialState: State) as this =
                 producerList |> List.tryFind(
                     fun producer -> 
                         let producerRunningState = (producer :> ``Provide a Producer Driver``).ProducerDriver.RunningState
-                        producer.Properties.Name = props.Name && producerRunningState = ProducerState.Running)
+                        match producer.Properties.Name with
+                        |   Fixed foreingName -> foreingName = localName && producerRunningState = ProducerState.Running
+                        |   _   -> raise <| SubRouteException("There is a subroute listening to a dynamic endpoint - this should never occur - framework problem."))
             match producerCandidate with
-            |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" props.Name)
+            |   None      -> if props.Options.FailForMissingActiveSubRoute then raise <| SubRouteException(sprintf "ERROR: No active subroute found under name: %s" localName)
                              else 
-                                logger.Debug(sprintf "Missing active subroute '%s', ignore and continue" props.Name)
+                                logger.Debug(sprintf "Missing active subroute '%s', ignore and continue" localName)
                                 message    // for now: ignore and continue
             |   Some producer ->  
                 let driverResponse = producer.Agent.PostAndReply(fun replychannel -> GetDriver(replychannel))

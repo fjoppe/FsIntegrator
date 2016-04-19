@@ -4,10 +4,11 @@ open System.IO
 open System.Xml.XPath
 open Camel.Core
 open Camel.Core.General
+open Camel.Core.MessageOperations
 open Camel.FileHandling
 open Camel.FileHandling.FileSystem
+open Camel.Core.MessageOperations
 open Camel.SubRoute
-open Camel.MessageOperations
 
 
 module FileConsumerDefaults =
@@ -46,19 +47,35 @@ module Consumers =
     type To = struct end
     type To with
         /// Store a message's body in a File
-        static member File(path) =
+        static member File(path: string) =
             File(path, FileConsumerDefaults.defaultConsumerOptions) :> IConsumer
         
         /// Store a message's body in a File
-        static member File(path, options) = 
+        static member File(path : string, options) = 
+            File(path, FileConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
+
+        /// Store a message's body in a File
+        static member File(path: StringMacro) =
+            File(path, FileConsumerDefaults.defaultConsumerOptions) :> IConsumer
+        
+        /// Store a message's body in a File
+        static member File(path : StringMacro, options) = 
             File(path, FileConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
 
         /// Send a message to an active subroute
-        static member SubRoute(name) = 
+        static member SubRoute(name : string) = 
             SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions) :> IConsumer
 
         /// Send a message to an active subroute
-        static member SubRoute(name, options) = 
+        static member SubRoute(name : string, options) = 
+            SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
+
+        /// Send a message to an active subroute
+        static member SubRoute(name : StringMacro) = 
+            SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions) :> IConsumer
+
+        /// Send a message to an active subroute
+        static member SubRoute(name : StringMacro, options) = 
             SubRoute(name, SubRouteConsumerDefaults.defaultConsumerOptions @ options) :> IConsumer
 
         /// Process a Message with a custom function
@@ -86,4 +103,8 @@ module Consumers =
         static member Process<'a when 'a : comparison> (mapper : Map<'a,string>, func : Map<'a,string> -> Message -> unit) =
             let macroMapper = mapper |> Map.toSeq |> Seq.map(fun (k,v) -> k, XPath(v)) |> Map.ofSeq
             To.Process(macroMapper, func)
+
+        /// Choose one of the routes, specified by its condition
+        static member Choose (conditions : ConditionalRoute list) =
+            DefinitionType.Choose(conditions)
 

@@ -2,6 +2,7 @@
 
 open Camel.Core
 open Camel.Core.EngineParts
+open Camel.Core.MessageOperations
 
 exception SubRouteException of string
 
@@ -14,5 +15,6 @@ type SubRoute =
         interface IConsumer
         interface IRegisterEngine
         internal new : string * SubRouteOption list -> SubRoute
+        internal new : StringMacro * SubRouteOption list -> SubRoute
     end
 

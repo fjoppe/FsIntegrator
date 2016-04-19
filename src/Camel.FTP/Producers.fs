@@ -44,8 +44,8 @@ module Producers =
     type From = struct end
     type From with
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member Ftp(path, connection) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions)
+        static member Ftp(path : string, connection) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions)
 
         /// Create a File-listener Producer, which listens to a folder on the local filesystem
-        static member Ftp(path, connection, options) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions @ options)
+        static member Ftp(path : string, connection, options) = Ftp(path, connection, FtpProducerDefaults.defaultProducerOptions @ options)
 

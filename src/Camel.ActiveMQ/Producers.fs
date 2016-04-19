@@ -14,8 +14,8 @@ module Producers =
     type From = struct end
     type From with
         /// Create an ActiveMQ listener, which listens to message on the specified destination. A destination is a topic or queue.
-        static member ActiveMQ(destination) = ActiveMQ(destination, ActiveMQProducerDefaults.defaultProducerOptions)
+        static member ActiveMQ(destination : string) = ActiveMQ(destination, ActiveMQProducerDefaults.defaultProducerOptions)
 
         /// Create an ActiveMQ listener, which listens to message on the specified destination. A destination is a topic or queue.
-        static member ActiveMQ(destination, options) = ActiveMQ(destination, ActiveMQProducerDefaults.defaultProducerOptions @ options)
+        static member ActiveMQ(destination : string, options) = ActiveMQ(destination, ActiveMQProducerDefaults.defaultProducerOptions @ options)
 

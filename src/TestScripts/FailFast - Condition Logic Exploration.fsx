@@ -21,7 +21,9 @@ open Camel.Core.General
 open Camel.Core.RouteEngine
 open Camel.FileHandling
 open Camel.FileHandling.FileSystem
-open Camel.MessageOperations
+open Camel.Core.MessageOperations
+open Camel.Core.Definitions
+open Camel.Conditionals
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
@@ -38,13 +40,22 @@ let Process1 = To.Process(fun (m:Message) -> printfn "P1: Message received: %A" 
 let Process2 = To.Process(maps, fun mp m -> printfn "P2: Processing: %s" mp.["hi-message"])
 
 //  Some condition tests
-let c1 = Header("property") = Header("property")
-let c2 = Header("property") = "test"
-let c3 = Header("property").ToInt = Int(11)
-let c4 = Header("property").ToInt = (12)
-let c5 = Header("property").ToFloat = Float(13.0)
-let c6 = Header("property").ToInt = 14
-let c7 = Header("prop1").ToInt <> XPath("//root/message").ToInt
+let c1 = Header("property") &= Header("property")
+let c2 = Header("property") &= "test"
+let c3 = Header("property").ToInt &= Int(11)
+let c4 = Header("property").ToInt &= (12)
+let c5 = Header("property").ToFloat &= Float(13.0)
+let c6 = Header("property").ToInt &= 14
+let c7 = Header("prop1").ToInt <&> XPath("//root/message").ToInt
+
+To.Choose [
+    When(Header("property") &= "test1") 
+        =>= Process1 
+        =>= Process2
+    When(Header("property").ToInt &= 14) 
+        =>= Process1 
+        =>= Process2
+]
 
 
 //let Route1 = 

@@ -83,6 +83,7 @@
     <Compile Include="Producers.fs" />
     <Compile Include="Consumers.fsi" />
     <Compile Include="Consumers.fs" />
+    <Compile Include="Conditional.fs" />
     <None Include="FailFast - FSMonad.fsx" />
     <None Include="FailFast - Resource Pool.fsx" />
     <Content Include="packages.config" />

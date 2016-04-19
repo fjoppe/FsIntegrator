@@ -9,6 +9,7 @@ open NLog
 open Camel.Core
 open Camel.Core.General
 open Camel.Core.EngineParts
+open Camel.Core.MessageOperations
 open Camel.Utility
 
 exception ActiveMQComponentException of string
@@ -25,9 +26,13 @@ type AMQOption =
     |  ConcurrentTasks of int
 
 
+type DestinationNameType =
+    |   Fixed       of string
+    |   Evaluate    of StringMacro
+
 type Properties = {
         Id              : Guid
-        Destination     : string
+        Destination     : DestinationNameType
         Connection      : Uri
         Credentials     : Credentials option
         DestinationType : DestinationType
@@ -37,7 +42,7 @@ type Properties = {
     static member convertOptions options =
         let defaultOptions = {
             Id = Guid.NewGuid()
-            Destination = String.Empty
+            Destination = Fixed(String.Empty)
             DestinationType = DestinationType.Queue
             Connection = new Uri("urn:invalid")
             Credentials = None
@@ -91,12 +96,20 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
+    let getDestination (message: Message option) =
+        match props.Destination with
+        |   Fixed str   -> str
+        |   Evaluate strmacro ->
+            match message with
+            |   Some    (msg) -> strmacro.Substitute(msg)
+            |   None          -> raise <| ActiveMQComponentException("Cannot evaluate StringMacro without message")
+
     //  Utility functions
     let changeState (newState:State) = ActiveMQ(props, newState)
 
     let witProducerHookOrFail state action =
         if state.ProducerHook.IsSome then action()
-        else raise (MissingMessageHook(sprintf "ActiveMQ consumer '%s' has no producer hook." props.Destination))
+        else raise (MissingMessageHook(sprintf "ActiveMQ consumer '%s' has no producer hook." (getDestination None)))
 
     let convertToActiveMQ (dt:DestinationType) : Apache.NMS.DestinationType =
         match dt with
@@ -123,7 +136,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
     let startListening state =
         let connection = getActiveMQConnection()
         let session = connection.CreateSession(AcknowledgementMode.ClientAcknowledge)
-        let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
+        let destination = SessionUtil.GetDestination(session, (getDestination None), convertToActiveMQ props.DestinationType)
 
         let consumer = session.CreateConsumer(destination)
 
@@ -145,7 +158,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
         let processMessage send =
             let amqMessage = consumer.Receive()
-            logger.Debug(sprintf "Received message from: %s - %A" props.Destination props.DestinationType)
+            logger.Debug(sprintf "Received message from: %s - %A" (getDestination None) props.DestinationType)
             sendMessage send amqMessage 
 
 
@@ -160,7 +173,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         }
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)       
         connection.Start()
-        logger.Debug(sprintf "Started ActiveMQ Listener for destination: %s - %A" props.Destination props.DestinationType)
+        logger.Debug(sprintf "Started ActiveMQ Listener for destination: %s - %A" (getDestination None) props.DestinationType)
         { state with Connection = Some connection; Session = Some session}
 
         
@@ -179,7 +192,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             let msg = "ActiveMQ has no Connection set, this may never occur!"
             logger.Error(msg)
             printfn "%s"msg
-        logger.Debug(sprintf "Stopped ActiveMQ Listener for destination: %s - %A" props.Destination props.DestinationType)
+        logger.Debug(sprintf "Stopped ActiveMQ Listener for destination: %s - %A" (getDestination None) props.DestinationType)
         { state with Connection = None; Session = None; Cancellation = new CancellationTokenSource()} // the CancellationToken is not reusable, so we make this for the next "start"
 
 
@@ -239,11 +252,16 @@ type ActiveMQ(props : Properties, initialState : State) as this =
     member private this.Properties with get() = props
     member private this.State with get() = initialState
 
-
-    new(destination, optionList) =
+    new(destination : DestinationNameType, optionList : AMQOption list) =
         let options = Properties.Create destination optionList
         let componentState = State.Create options
         ActiveMQ(options, componentState)
+
+    new(destination : string, optionList : AMQOption list) =
+        ActiveMQ((Fixed destination), optionList)
+
+    new(destination : StringMacro, optionList : AMQOption list) =
+        ActiveMQ((Evaluate destination), optionList)
 
     //  =============================================== Producer ===============================================
     interface IProducer
@@ -266,9 +284,12 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
     //  ===============================================  Consumer  ===============================================
     interface IConsumer
-    member private this.Consume (producer:IMessageProducer) (message:Camel.Core.General.Message) =        
+    member private this.Consume (session:ISession) (message:Camel.Core.General.Message) =        
         try
-            logger.Debug(sprintf "Send message to %s - %A" props.Destination props.DestinationType)
+            let destinationName = getDestination (Some message)
+            let destination = SessionUtil.GetDestination(session, destinationName, convertToActiveMQ props.DestinationType)
+            let producer = session.CreateProducer(destination)
+            logger.Debug(sprintf "Send message to %s - %A" destinationName props.DestinationType)
             let messageToSend = producer.CreateTextMessage(message.Body)
             producer.Send(messageToSend)
             message
@@ -287,9 +308,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
                 logger.Debug("GetConsumerHook.get()")
                 let sessionResponse = agent.PostAndReply(fun replychannel -> GetSession(replychannel))
                 let session = sessionResponse.GetResponseOrRaise()
-                let destination = SessionUtil.GetDestination(session, props.Destination, convertToActiveMQ props.DestinationType)
-                let producer = session.CreateProducer(destination)
-                this.Consume producer
+                this.Consume session
 
     interface IRegisterEngine with
         member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore

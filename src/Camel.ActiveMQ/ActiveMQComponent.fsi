@@ -4,6 +4,7 @@ open System
 open Camel.Core
 open Camel.Core.EngineParts
 open Camel.Core.General
+open Camel.Core.MessageOperations
 
 exception ActiveMQComponentException of string
 
@@ -30,5 +31,6 @@ type ActiveMQ =
         interface IConsumer
         interface IRegisterEngine
         internal new : string * AMQOption list -> ActiveMQ
+        internal new : StringMacro * AMQOption list -> ActiveMQ
     end
 

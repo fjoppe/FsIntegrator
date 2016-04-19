@@ -2,6 +2,7 @@
 
 open Camel.Core
 open Camel.Core.General
+open Camel.Core.MessageOperations
 open Camel.FileTransfer
 
 /// Contains the FTP Consumer, reference "Camel.FTP.dll" to use it.
@@ -14,3 +15,8 @@ module Consumers=
         /// Store a message's body in a File
         static member Ftp : path : string * connection : string * options : FtpOption list -> IConsumer
 
+        /// Store a message's body in a File
+        static member Ftp : path : StringMacro * connection : string -> IConsumer
+        
+        /// Store a message's body in a File
+        static member Ftp : path : StringMacro * connection : string * options : FtpOption list -> IConsumer

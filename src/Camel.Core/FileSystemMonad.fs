@@ -63,5 +63,6 @@ type FSBuilder() =
 module FileSystem =  
     let fs = FSBuilder()
 
+    /// Empty File Script (do nothing)
     let NoFileScript = fun _ -> FSScript.Empty
 
