@@ -12,19 +12,19 @@ module RouteEngine =
     let AsProducerDriver (ip:IProducer) =
         ip :?> ``Provide a Producer Driver``
 
-    let rec ExecuteRouteForMessage (route : DefinitionType list) (message : Message) =
+    let rec ExecuteRouteForMessage (route : DefinitionType list) (initialMessage : Message) =
         route 
-        |> List.fold(fun m dt ->
-            match dt with
-            |   ProcessStep func -> func m
-            |   Consume(consumerComponent, func) -> func m
+        |> List.fold(fun currentMessage definitionType ->
+            match definitionType with
+            |   ProcessStep func -> func currentMessage
+            |   Consume(consumerComponent, func) -> func currentMessage
             |   Choose conditionList ->
                 //  choose the first condition that complies
-                let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(message) then Some(condition) else None)
+                let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(currentMessage) then Some(condition) else None)
                 match firstChoice with
-                |   None           -> m   //  continue with input message
-                |   Some condition -> ExecuteRouteForMessage (condition.Route) message               
-        ) message 
+                |   None           -> currentMessage   //  continue with input message
+                |   Some condition -> ExecuteRouteForMessage (condition.Route) initialMessage               
+        ) initialMessage 
 
 
     type RouteInfo = {
