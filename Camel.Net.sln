@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
@@ -46,9 +46,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts"
 		src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx = src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx
 		src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx
 		src\TestScripts\FailFast - Camel.Net ActiveMQ Listener.fsx = src\TestScripts\FailFast - Camel.Net ActiveMQ Listener.fsx
+		src\TestScripts\FailFast - Camel.Net Condition Logic.fsx = src\TestScripts\FailFast - Camel.Net Condition Logic.fsx
 		src\TestScripts\FailFast - Camel.Net File Listener.fsx = src\TestScripts\FailFast - Camel.Net File Listener.fsx
 		src\TestScripts\FailFast - Camel.Net FTP Listener.fsx = src\TestScripts\FailFast - Camel.Net FTP Listener.fsx
-		src\TestScripts\FailFast - Condition Logic Exploration.fsx = src\TestScripts\FailFast - Condition Logic Exploration.fsx
 		src\TestScripts\FailFast - FTP Client Exploration.fsx = src\TestScripts\FailFast - FTP Client Exploration.fsx
 		src\TestScripts\nlog.config = src\TestScripts\nlog.config
 	EndProjectSection
