@@ -7,12 +7,12 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>aaf73f89-4cde-4f79-9cce-bcaa50a9686e</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Camel.FTP</RootNamespace>
+    <RootNamespace>FsIntegrator.FTP</RootNamespace>
     <AssemblyName>FsIntegrator.FTP</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>Camel.FTP</Name>
+    <Name>FsIntegrator.FTP</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -32,7 +32,7 @@
     <OutputPath>bin\Release</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\Camel.FTP.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FsIntegrator.FTP.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

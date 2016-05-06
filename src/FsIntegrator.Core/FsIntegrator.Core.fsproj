@@ -8,12 +8,12 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>f9de463d-b623-46c8-b6e4-0bc5370c1b59</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Camel.Core</RootNamespace>
+    <RootNamespace>FsIntegrator.Core</RootNamespace>
     <AssemblyName>FsIntegrator.Core</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>Camel.Core</Name>
+    <Name>FsIntegrator.Core</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -36,7 +36,7 @@
     <OutputPath>bin\Release</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\Camel.Core.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FsIntegrator.Core.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

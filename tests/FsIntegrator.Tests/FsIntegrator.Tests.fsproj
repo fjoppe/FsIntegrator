@@ -7,8 +7,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>5a5167df-c337-4eb2-9eb5-d6650102a246</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Camel.Net.Tests</RootNamespace>
-    <AssemblyName>Camel.Net.Tests</AssemblyName>
+    <RootNamespace>FsIntegrator.Net.Tests</RootNamespace>
+    <AssemblyName>FsIntegrator.Net.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <Name>FsIntegrator.Tests</Name>

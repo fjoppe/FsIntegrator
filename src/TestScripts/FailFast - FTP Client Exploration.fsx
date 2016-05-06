@@ -35,6 +35,6 @@ remotefile.CopyTo(localfile)
 remotefile.Close()
 localfile.Close()
 
-client.CreateDirectory("/home/test/.camel", true)
-client.Rename("/home/test/testfile.xml", "/home/test/.camel/testfile.xml")
+client.CreateDirectory("/home/test/.success", true)
+client.Rename("/home/test/testfile.xml", "/home/test/.success/testfile.xml")
 

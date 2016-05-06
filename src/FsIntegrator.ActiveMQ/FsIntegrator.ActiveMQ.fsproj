@@ -7,12 +7,12 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>ad099f63-c951-4978-8564-5fd8aaaf3443</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Camel.ActiveMQ</RootNamespace>
+    <RootNamespace>FsIntegrator.ActiveMQ</RootNamespace>
     <AssemblyName>FsIntegrator.ActiveMQ</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>Camel.ActiveMQ</Name>
+    <Name>FsIntegrator.ActiveMQ</Name>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -34,7 +34,7 @@
     <OutputPath>bin\Release</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\Camel.ActiveMQ.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FsIntegrator.ActiveMQ.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
