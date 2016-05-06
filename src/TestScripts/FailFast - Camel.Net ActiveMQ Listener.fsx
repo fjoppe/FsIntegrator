@@ -1,6 +1,6 @@
 ﻿//  ============================================================================================================
 //
-//  This script demonstrates the Camel.Net ActiveMQ listener, which recreives an XML message from ActiveMQ and 
+//  This script demonstrates the FsIntegrator ActiveMQ listener, which recreives an XML message from ActiveMQ and 
 //  sends its contents to the route. The Processors demonstate the receival of the message by printing it to stdout.
 //
 //  The RouteEngine demonstrates simple start, stop and info commands.
@@ -15,20 +15,20 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important
-#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"   // the order of #r to dll's is important
+#r @"FsIntegrator.ActiveMQ/bin/Debug/FsIntegrator.ActiveMQ.dll"
 #r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
 open NLog
-open Camel.Core
-open Camel.Core.Definitions
-open Camel.Producers
-open Camel.Consumers
-open Camel.Core.General
-open Camel.Core.RouteEngine
-open Camel.Queing
+open FsIntegrator.Core
+open FsIntegrator.Core.Definitions
+open FsIntegrator.Producers
+open FsIntegrator.Consumers
+open FsIntegrator.Core.General
+open FsIntegrator.Core.RouteEngine
+open FsIntegrator.Queing
 
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log

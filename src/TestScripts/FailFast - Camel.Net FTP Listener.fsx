@@ -15,20 +15,20 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important
-#r @"Camel.FTP/bin/Debug/Camel.FTP.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"   // the order of #r to dll's is important
+#r @"FsIntegrator.FTP/bin/Debug/FsIntegrator.FTP.dll"
 #r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
 open NLog
-open Camel.Core
-open Camel.Core.Definitions
-open Camel.Producers
-open Camel.Consumers
-open Camel.Core.General
-open Camel.Core.RouteEngine
-open Camel.FileTransfer
+open FsIntegrator.Core
+open FsIntegrator.Core.Definitions
+open FsIntegrator.Producers
+open FsIntegrator.Consumers
+open FsIntegrator.Core.General
+open FsIntegrator.Core.RouteEngine
+open FsIntegrator.FileTransfer
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
@@ -63,7 +63,7 @@ StartRoute id
 
 //  At this point, you can put a file in /home/test/inbox on the FTP system, which will be picked up by the route.
 //  As an example file, you can use: "./src/TestExamples/TestFiles/test-message2.xml"
-//  When the file is processed, it will be moved to /home/test/inbox/.camel or /home/test/inbox/.error
+//  When the file is processed, it will be moved to /home/test/inbox/.success or /home/test/inbox/.error
 
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 StopRoute id

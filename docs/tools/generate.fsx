@@ -11,17 +11,17 @@
 // (This is the original behaviour of ProjectScaffold prior to multi project support)
 let referenceBinaries = []
 // Web site location for the generated documentation
-let website = "/Camel.Net"
+let website = "/FsIntegrator"
 
-let githubLink = "http://github.com/fjoppe/Camel.Net"
+let githubLink = "http://github.com/fjoppe/FsIntegrator"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "Camel.Net"
+  [ "project-name", "FsIntegrator"
     "project-author", "Frank Joppe"
     "project-summary", "F# DSL for Enterprise Integration Patterns"
     "project-github", githubLink
-    "project-nuget", "http://nuget.org/packages/Camel.Net" ]
+    "project-nuget", "http://nuget.org/packages/FsIntegrator" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below

@@ -11,7 +11,7 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".."
-#r "Camel.FTP/bin/Debug/System.Net.FtpClient.dll"
+#r "FsIntegrator.FTP/bin/Debug/System.Net.FtpClient.dll"
 
 open System
 open System.IO

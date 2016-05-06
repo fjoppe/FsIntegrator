@@ -17,22 +17,22 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"   // the order of #r to dll's is important, this one comes first
-#r @"Camel.FTP/bin/Debug/Camel.FTP.dll"
-#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"   // the order of #r to dll's is important, this one comes first
+#r @"FsIntegrator.FTP/bin/Debug/FsIntegrator.FTP.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/FsIntegrator.ActiveMQ.dll"
 #r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
 open NLog
-open Camel.Core
-open Camel.Producers
-open Camel.Consumers
-open Camel.Core.General
-open Camel.Core.RouteEngine
-open Camel.FileTransfer
-open Camel.Queing
-open Camel.Core.Definitions
+open FsIntegrator.Core
+open FsIntegrator.Producers
+open FsIntegrator.Consumers
+open FsIntegrator.Core.General
+open FsIntegrator.Core.RouteEngine
+open FsIntegrator.FileTransfer
+open FsIntegrator.Queing
+open FsIntegrator.Core.Definitions
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
@@ -97,9 +97,9 @@ StartRoute id3
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 
 //  At this point, any xml file in ./src/TestExamples/TestFullRoute/ will be processed (see prereqs)
-//  If successful the file is copied to: ./src/TestExamples/TestFullRoute/.camel
+//  If successful the file is copied to: ./src/TestExamples/TestFullRoute/.success
 //  If error      the file is copied to: ./src/TestExamples/TestFullRoute/.error
-//  Tip: you can move a file in the .camel or .error folder back to the .../TestFullRoute/ folder
+//  Tip: you can move a file in the .success or .error folder back to the .../TestFullRoute/ folder
 
 printfn "***************************"
 

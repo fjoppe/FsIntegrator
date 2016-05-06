@@ -4,7 +4,7 @@
 #I "../../bin"
 
 (**
-Camel.Net
+FsIntegrator
 ======================
 
 Documentation
@@ -13,8 +13,8 @@ Documentation
   <div class="span1"></div>
   <div class="span6">
     <div class="well well-small" id="nuget">
-      The Camel.Net library can be <a href="https://nuget.org/packages/Camel.Net">installed from NuGet</a>:
-      <pre>PM> Install-Package Camel.Net</pre>
+      The FsIntegrator library can be <a href="https://nuget.org/packages/FsIntegrator">installed from NuGet</a>:
+      <pre>PM> Install-Package FsIntegrator</pre>
     </div>
   </div>
   <div class="span1"></div>
@@ -26,8 +26,8 @@ Example
 This example demonstrates using a function defined in this sample library.
 
 *)
-#r "Camel.Net.dll"
-open Camel.Net
+#r "FsIntegrator.dll"
+open FsIntegrator
 
 printfn "hello = %i" <| Library.hello 0
 
@@ -59,9 +59,9 @@ The library is available under Public Domain license, which allows modification 
 redistribution for both commercial and non-commercial purposes. For more information see the 
 [License file][license] in the GitHub repository. 
 
-  [content]: https://github.com/fsprojects/Camel.Net/tree/master/docs/content
-  [gh]: https://github.com/fsprojects/Camel.Net
-  [issues]: https://github.com/fsprojects/Camel.Net/issues
-  [readme]: https://github.com/fsprojects/Camel.Net/blob/master/README.md
-  [license]: https://github.com/fsprojects/Camel.Net/blob/master/LICENSE.txt
+  [content]: https://github.com/fsprojects/FsIntegrator/tree/master/docs/content
+  [gh]: https://github.com/fsprojects/FsIntegrator
+  [issues]: https://github.com/fsprojects/FsIntegrator/issues
+  [readme]: https://github.com/fsprojects/FsIntegrator/blob/master/README.md
+  [license]: https://github.com/fsprojects/FsIntegrator/blob/master/LICENSE.txt
 *)

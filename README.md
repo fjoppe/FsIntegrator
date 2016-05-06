@@ -1,7 +1,7 @@
-[![Issue Stats](http://issuestats.com/github/fjoppe/Camel.Net/badge/issue)](http://github.com/fjoppe/Camel.Net)
-[![Issue Stats](http://issuestats.com/github/fjoppe/Camel.Net/badge/pr)](http://github.com/fjoppe/Camel.Net)
+[![Issue Stats](http://issuestats.com/github/fjoppe/FsIntegrator/badge/issue)](http://github.com/fjoppe/FsIntegrator)
+[![Issue Stats](http://issuestats.com/github/fjoppe/FsIntegrator/badge/pr)](http://github.com/fjoppe/FsIntegrator)
 
-# Camel.Net
+# FsIntegrator
 F# DSL for Enterprise Integration Patterns
 
 Create easy message routes, like this:
@@ -32,7 +32,8 @@ In order to build this project run:
     > build.cmd // on windows    
     $ ./build.sh  // on unix
 
-   
+Notes:
+This project currently builds under Visual Studio 2015. Due to the renaming process, the Build scripts do not work yet... but that'll change soon.
 
 ## Maintainer(s)
 

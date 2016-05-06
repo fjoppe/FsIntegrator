@@ -9,14 +9,14 @@
 
 #I __SOURCE_DIRECTORY__
 #I ".." 
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"
 
 open System.IO
-open Camel.Core
-open Camel.Producers
-open Camel.Consumers
-open Camel.Core.RouteEngine
-open Camel.Core.Definitions
+open FsIntegrator.Core
+open FsIntegrator.Producers
+open FsIntegrator.Consumers
+open FsIntegrator.Core.RouteEngine
+open FsIntegrator.Core.Definitions
 
 let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFileListener")
 

@@ -10,8 +10,8 @@ Introducing your project
 Say more
 
 *)
-#r "Camel.Net.dll"
-open Camel.Net
+#r "FsIntegrator.dll"
+open FsIntegrator
 
 Library.hello 0
 (**

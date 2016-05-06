@@ -14,26 +14,26 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.dll"
-#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.ActiveMQ.dll"
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"
-#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/Apache.NMS.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/Apache.NMS.ActiveMQ.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/FsIntegrator.ActiveMQ.dll"
 #r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
 open NLog
-open Camel.Core
-open Camel.Producers
-open Camel.Consumers
-open Camel.Core.General
-open Camel.Core.RouteEngine
-open Camel.FileHandling
-open Camel.FileHandling.FileSystem
-open Camel.Core.MessageOperations
-open Camel.Core.Definitions
-open Camel.Conditionals
-open Camel.Queing
+open FsIntegrator.Core
+open FsIntegrator.Producers
+open FsIntegrator.Consumers
+open FsIntegrator.Core.General
+open FsIntegrator.Core.RouteEngine
+open FsIntegrator.FileHandling
+open FsIntegrator.FileHandling.FileSystem
+open FsIntegrator.Core.MessageOperations
+open FsIntegrator.Core.Definitions
+open FsIntegrator.Conditionals
+open FsIntegrator.Queing
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))

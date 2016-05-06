@@ -10,10 +10,10 @@
 #I __SOURCE_DIRECTORY__
 #I ".." 
 #I "../../packages" 
-#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.dll"
-#r @"Camel.ActiveMQ/bin/Debug/Apache.NMS.ActiveMQ.dll"
-#r @"Camel.Core/bin/Debug/Camel.Core.dll"
-#r @"Camel.ActiveMQ/bin/Debug/Camel.ActiveMQ.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/Apache.NMS.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/Apache.NMS.ActiveMQ.dll"
+#r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"
+#r @"FsIntegrator.ActiveMQ/bin/Debug/FsIntegrator.ActiveMQ.dll"
 
 open System
 open Apache.NMS
