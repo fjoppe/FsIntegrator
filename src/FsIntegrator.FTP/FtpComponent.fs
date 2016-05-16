@@ -2,6 +2,7 @@
 
 open System
 open System.IO
+open System.Net
 open System.Text
 open System.Threading
 open System.Timers
@@ -143,12 +144,23 @@ type Ftp(props : Properties, initialState : State) as this =
         if state.ProducerHook.IsSome then action()
         else raise (MissingMessageHook(sprintf "File with path '%s' has no producer hook." (getPath None)))
 
+    let getHostUri() = Uri(sprintf "ftp://%s" props.Connection)
+
     let getFtpClient() =
-        let connectUri = 
-            match props.Options.Credentials with
-            |  None        -> Uri(sprintf "ftp://%s" props.Connection)
-            |  Some(creds) -> Uri(sprintf "ftp://%s:%s@%s" creds.Username creds.Password props.Connection)
-        let client = FtpClient.Connect(connectUri)
+        logger.Trace("getFtpClient()")
+        let connectUri = getHostUri()
+        logger.Trace(sprintf "Connection: '%A'" connectUri)
+
+        let client = new FtpClient()
+        client.Host <- connectUri.Host
+
+        match props.Options.Credentials with
+        |  None        ->
+            logger.Trace("No FTP Credentials")
+            ()
+        |  Some(creds) -> 
+            logger.Trace("Applying FTP Credentials")
+            client.Credentials <- new NetworkCredential(creds.Username, creds.Password)
         client
 
     /// Change the running state of this instance
@@ -156,7 +168,7 @@ type Ftp(props : Properties, initialState : State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
-            logger.Debug(sprintf "Changing running state to: %A" targetState)
+            logger.Trace(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     /// State File polling
@@ -193,7 +205,6 @@ type Ftp(props : Properties, initialState : State) as this =
                     FtpScript.Run client action
                 with
                 |  e -> 
-                    printfn "Exception! %A" e
                     logger.Error(e)
             //#endregion
 
@@ -223,8 +234,7 @@ type Ftp(props : Properties, initialState : State) as this =
                 |> List.sortBy (fun fileInfo -> fileInfo.Created)
                 |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
             with
-            |   e -> printfn "%A" e
-                     logger.Error e
+            |   e -> logger.Error e
 
             return! loop()
         }
@@ -256,25 +266,25 @@ type Ftp(props : Properties, initialState : State) as this =
 
             let rec loop (state:State) = 
                 async {
-                    logger.Debug "Waiting for message.."
+                    logger.Trace "Waiting for message.."
                     let! command = inbox.Receive()
                     try
                         match command with
                         |   SetProducerHook (hook, replychannel) -> 
-                            logger.Debug "SetProducerHook"
+                            logger.Trace "SetProducerHook"
                             return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                         |   SetEngineServices (svc, replychannel) -> 
-                            logger.Debug "SetEngineServices"
+                            logger.Trace "SetEngineServices"
                             return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                         |   ChangeRunningState (targetState, action, replychannel) ->
-                            logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
+                            logger.Trace(sprintf "ChangeRunningState to: %A" targetState)
                             return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                         |   GetRunningState replychannel ->
-                            logger.Debug "GetRunningState"
+                            logger.Trace "GetRunningState"
                             replychannel.Reply <| Response(state.RunningState)
                             return! loop state
                         |   GetEngineServices replychannel ->
-                            logger.Debug "GetEngineServices"
+                            logger.Trace "GetEngineServices"
                             match state.EngineServices with
                             |   None       -> replychannel.Reply <| ERROR(FtpComponentException("This consumer is not connected with a route-engine"))
                             |   Some value -> replychannel.Reply <| Response(value)
@@ -313,14 +323,13 @@ type Ftp(props : Properties, initialState : State) as this =
         member this.Stop() = agent.PostAndReply(fun replychannel -> ChangeRunningState(Stopped, stopFilePolling, replychannel)) |> ignore
         member this.SetProducerHook hook = agent.PostAndReply(fun replychannel -> SetProducerHook(hook, replychannel)) |> ignore
 
-
         member this.RunningState 
             with get () = 
                 let result = agent.PostAndReply(fun replychannel -> GetRunningState(replychannel))
                 result.GetResponseOrRaise()
 
         member this.Validate() =
-            logger.Debug("Validate()")
+            logger.Trace("Validate()")
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let ftpListenerList = services.producerList<Ftp>()
@@ -346,7 +355,7 @@ type Ftp(props : Properties, initialState : State) as this =
     member private this.writeFile (message:Message) =      
         try
             let path = getPath (Some message)
-            logger.Debug(sprintf "Write message to path: %s" path)
+            logger.Debug(sprintf "Write to: '%A/%s'" (getHostUri()) path)
             let bufferToWrite = System.Text.Encoding.UTF8.GetBytes(message.Body)
             use targetStream = initialState.FtpClient.OpenWrite(path) :?> FtpDataStream
             targetStream.Write(bufferToWrite, 0, bufferToWrite.Length)
@@ -359,6 +368,13 @@ type Ftp(props : Properties, initialState : State) as this =
             reraise()
 
     member private this.Consume (message:Message) =
+        let client = initialState.FtpClient
+        if not(client .IsConnected) then 
+            logger.Trace("Not connected yet, now making connection...")
+            client.Connect()
+            let connectUri = getHostUri()
+            client.SetWorkingDirectory(client.GetWorkingDirectory() + connectUri.LocalPath)
+            logger.Debug(sprintf "Connected to: '%A', Current workdir: '%s'" (connectUri) (client.GetWorkingDirectory()))
         this.writeFile message
         message
 
@@ -366,14 +382,14 @@ type Ftp(props : Properties, initialState : State) as this =
         override this.ConsumerDriver 
             with get() = 
                 let client = getFtpClient()
-                client.Connect()
                 Ftp(props, {initialState with FtpClient = client}) :> IConsumerDriver
 
     interface IConsumerDriver with
         member self.GetConsumerHook 
             with get() = 
-                logger.Debug("GetConsumerHook.get()")
+                logger.Trace("GetConsumerHook.get()")
                 this.Consume
 
     interface IRegisterEngine with
         member this.Register services = agent.PostAndReply(fun replychannel -> SetEngineServices(services, replychannel)) |> ignore
+

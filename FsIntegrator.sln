@@ -37,6 +37,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts"
 		src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx
 		src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx = src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx
 		src\TestScripts\FailFast - FsIntegrator Condition Logic.fsx = src\TestScripts\FailFast - FsIntegrator Condition Logic.fsx
+		src\TestScripts\FailFast - FsIntegrator Error test.fsx = src\TestScripts\FailFast - FsIntegrator Error test.fsx
 		src\TestScripts\FailFast - FsIntegrator File Listener.fsx = src\TestScripts\FailFast - FsIntegrator File Listener.fsx
 		src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx = src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx
 		src\TestScripts\FailFast - FTP Client Exploration.fsx = src\TestScripts\FailFast - FTP Client Exploration.fsx

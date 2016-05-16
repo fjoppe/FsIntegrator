@@ -34,6 +34,8 @@ type Operators = Operation with
     static member FlowOperator (Operation, l:Route, r:IConsumer) = l.SetRoute <| l.Route @ [Operators.CreateConsumerRoutePart(r)]
     static member FlowOperator (Operation, l:ConditionalRoute, r:DefinitionType) = l.SetRoute <| l.Route @ [r]
     static member FlowOperator (Operation, l:ConditionalRoute, r:IConsumer) = l.SetRoute <| l.Route @ [Operators.CreateConsumerRoutePart(r)]
+    static member FlowOperator (Operation, l:ErrorHandlerRoute, r:DefinitionType) = l.SetRoute <| l.Route @ [r]
+    static member FlowOperator (Operation, l:ErrorHandlerRoute, r:IConsumer) = l.SetRoute <| l.Route @ [Operators.CreateConsumerRoutePart(r)]
 
     (*  Producer operations *)
     static member FlowOperator (Operation, p:IProducer, r:DefinitionType) = Operators.CreateProducerRoutePart(p,r)
@@ -46,9 +48,11 @@ type Operators = Operation with
     (*  Intermediate operations *)
     static member FlowOperator (Operation, l:Intermediate, r:DefinitionType)      = Operators.FlowOperator(Operation, l.DefinitionType, r)
     static member FlowOperator (Operation, l:Intermediate, r:Intermediate)        = Operators.FlowOperator(Operation, l.DefinitionType, r.DefinitionType)
-    static member FlowOperator (Operation, l:Route, r:Intermediate)               = Operators.FlowOperator(Operation, l, r.DefinitionType)
     static member FlowOperator (Operation, l:DefinitionType,  r:Intermediate)     = Operators.FlowOperator(Operation, l, r.DefinitionType)
-    static member FlowOperator (Operation, l:IProducer,    r:Intermediate)         = Operators.FlowOperator(Operation, l, r.DefinitionType)
+    static member FlowOperator (Operation, l:IProducer,    r:Intermediate)        = Operators.FlowOperator(Operation, l, r.DefinitionType)
+    static member FlowOperator (Operation, l:Route, r:Intermediate)               = Operators.FlowOperator(Operation, l, r.DefinitionType)
+    static member FlowOperator (Operation, l:ConditionalRoute, r:Intermediate)    = Operators.FlowOperator(Operation, l, r.DefinitionType)
+    static member FlowOperator (Operation, l:ErrorHandlerRoute, r:Intermediate)   = Operators.FlowOperator(Operation, l, r.DefinitionType)
 
 #nowarn "0064"
 module Definitions =

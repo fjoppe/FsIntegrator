@@ -3,7 +3,7 @@
 open FsIntegrator.Core
 open FsIntegrator.Core.MessageOperations
 
-
+#nowarn "0064"
 module Conditionals =
 
     type Conditional = ConditionOperation with
@@ -12,7 +12,6 @@ module Conditionals =
 
         /// Specifies a conditional route
         static member When (ConditionOperation, condition : IComparison) = ConditionalRoute.Create [] (Evaluatable(condition))
-
 
     /// Specifies a conditional route
     let inline When (condition:'N) = ((^T or ^N) : (static member When : ^T * ^N -> _) (ConditionOperation, condition))

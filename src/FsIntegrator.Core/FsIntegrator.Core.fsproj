@@ -77,8 +77,10 @@
     <Compile Include="Consumers.fsi" />
     <Compile Include="Consumers.fs" />
     <Compile Include="Conditional.fs" />
+    <Compile Include="ErrorHandler.fs" />
     <None Include="FailFast - FSMonad.fsx" />
     <None Include="FailFast - Resource Pool.fsx" />
+    <None Include="FailFast - Reflection.fsx" />
     <Content Include="packages.config" />
     <Content Include="App.config" />
   </ItemGroup>

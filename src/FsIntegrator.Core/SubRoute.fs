@@ -95,7 +95,7 @@ type SubRoute(props : Properties, initialState: State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
-            logger.Debug(sprintf "Changing running state to: %A" targetState)
+            logger.Trace(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     /// State Subroute
@@ -117,12 +117,12 @@ type SubRoute(props : Properties, initialState: State) as this =
             ),cancellationToken = state.Cancellation.Token            
         )
         agent.Start()
-        logger.Debug(sprintf "Started Subroute listener: %s" (getName None))
+        logger.Debug(sprintf "Started Subroute listener: '%s'" (getName None))
         {state with Driver = Some(agent)}
 
     let stopListening state = 
         state.Cancellation.Cancel()
-        logger.Debug(sprintf "Stopped Subroute listener: %s" (getName None))
+        logger.Debug(sprintf "Stopped Subroute listener: '%s'" (getName None))
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
 
@@ -145,26 +145,26 @@ type SubRoute(props : Properties, initialState: State) as this =
                     let! command = inbox.Receive()
                     match command with
                     |   SetProducerHook (hook, replychannel) -> 
-                        logger.Debug "SetProducerHook"
+                        logger.Trace "SetProducerHook"
                         return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                     |   SetEngineServices (svc, replychannel) -> 
-                        logger.Debug "SetEngineServices"
+                        logger.Trace "SetEngineServices"
                         return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                     |   ChangeRunningState (targetState, action, replychannel) ->
-                        logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
+                        logger.Trace(sprintf "ChangeRunningState to: %A" targetState)
                         return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                     |   GetRunningState replychannel ->
-                        logger.Debug "GetRunningState"
+                        logger.Trace "GetRunningState"
                         replychannel.Reply <| Response(state.RunningState)
                         return! loop state
                     |   GetEngineServices replychannel ->
-                        logger.Debug "GetEngineServices"
+                        logger.Trace "GetEngineServices"
                         match state.EngineServices with
                         |   None       -> replychannel.Reply <| ERROR(SubRouteException("This consumer is not connected with a route-engine"))
                         |   Some value -> replychannel.Reply <| Response(value)
                         return! loop state
                     |   GetDriver replychannel ->
-                        logger.Debug "GetDriver"
+                        logger.Trace "GetDriver"
                         match state.Driver with
                         |   None        -> replychannel.Reply <| ERROR(SubRouteException(sprintf "ERROR: Subroute does not have an active listener for '%s' - this is a framework problem, this may never occur." (getName None)))
                         |   Some driver -> replychannel.Reply <| Response(driver)
@@ -205,7 +205,7 @@ type SubRoute(props : Properties, initialState: State) as this =
                 result.GetResponseOrRaise()
 
         member this.Validate() =
-            logger.Debug("Validate()")
+            logger.Trace("Validate()")
             match initialState.EngineServices with
             |   None        -> false
             |   Some engine ->
@@ -222,7 +222,7 @@ type SubRoute(props : Properties, initialState: State) as this =
                             |   _ -> false
                             )
                     |   _ -> true
-                logger.Debug(sprintf "Is valid: %b" (not(invalid)))
+                logger.Trace(sprintf "Is valid: %b" (not(invalid)))
                 not(invalid)
 
 
@@ -232,7 +232,7 @@ type SubRoute(props : Properties, initialState: State) as this =
     member private this.Consume (message:Message) =
         try
             let localName = getName (Some message)
-            logger.Debug(sprintf "Received message, writing to path: %s" localName)
+            logger.Debug(sprintf "Send message to Subroute: '%s'" localName)
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let producerList = services.producerList<SubRoute>()

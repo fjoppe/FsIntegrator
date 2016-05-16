@@ -137,7 +137,7 @@ type File(props : Properties, initialState: State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
-            logger.Debug(sprintf "Changing running state to: %A" targetState)
+            logger.Trace(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     /// State File polling
@@ -148,7 +148,7 @@ type File(props : Properties, initialState: State) as this =
             if props.Options.CreateIfNotExists then
                 try
                     Directory.CreateDirectory(configUri.AbsolutePath) |> ignore
-                    logger.Debug(sprintf "Created directory: %s" configUri.AbsolutePath)
+                    logger.Debug(sprintf "Created directory: '%s'" configUri.AbsolutePath)
                 with
                 | e -> 
                     let msg = sprintf "Cannot create directory '%s'\n%A" configUri.AbsolutePath e
@@ -187,12 +187,12 @@ type File(props : Properties, initialState: State) as this =
             try
                 sendToRoute message |> ignore
                 fsRun <| props.Options.AfterSuccess message
-                logger.Debug(sprintf "File OK: Processed AfterSuccess()")
+                logger.Debug(sprintf "File processing OK, called AfterSuccess() for '%s'" fileInfo.FullName)
             with
             |  e -> 
                 logger.Error(sprintf "Error: %A" e)
                 fsRun <| props.Options.AfterError message
-                logger.Debug(sprintf "File Error: Processed AfterError")
+                logger.Debug(sprintf "File processing ERROR, called AfterError() for '%s'" fileInfo.FullName)
 
         /// Poll a target for files and process them. The polling stops when busy with a batch of files.
         let rec loop() = async {
@@ -204,7 +204,7 @@ type File(props : Properties, initialState: State) as this =
                     |> List.map(fun filename -> new FileInfo(filename))
                     |> List.sortBy (fun fileInfo -> fileInfo.CreationTimeUtc)
                     |> List.iter(fun fileInfo -> 
-                        logger.Debug(sprintf "Send file to route: %s" fileInfo.FullName)
+                        logger.Debug(sprintf "Received file: '%s'" fileInfo.FullName)
                         state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
             with
             |   e -> printfn "%A" e; logger.Error e
@@ -213,14 +213,14 @@ type File(props : Properties, initialState: State) as this =
         }
         state.Timer.Start()
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)
-        logger.Debug(sprintf "Started FileListener for path: %s" (getPath None))
+        logger.Debug(sprintf "Started FileListener for path: '%s'" (getPath None))
         state
 
 
     let stopFilePolling state = 
         state.Timer.Stop()
         state.Cancellation.Cancel()
-        logger.Debug(sprintf "Stopped FileListener for path: %s" (getPath None))
+        logger.Debug(sprintf "Stopped FileListener for path: '%s'" (getPath None))
         {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     let agent = 
@@ -238,25 +238,25 @@ type File(props : Properties, initialState: State) as this =
 
             let rec loop (state:State) = 
                 async {
-                    logger.Debug "Waiting for message.."
+                    logger.Trace "Waiting for message.."
                     let! command = inbox.Receive()
                     try
                         match command with
                         |   SetProducerHook (hook, replychannel) -> 
-                            logger.Debug "SetProducerHook"
+                            logger.Trace "SetProducerHook"
                             return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                         |   SetEngineServices (svc, replychannel) -> 
-                            logger.Debug "SetEngineServices"
+                            logger.Trace "SetEngineServices"
                             return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                         |   ChangeRunningState (targetState, action, replychannel) ->
-                            logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
+                            logger.Trace(sprintf "ChangeRunningState to: %A" targetState)
                             return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                         |   GetRunningState replychannel ->
-                            logger.Debug "GetRunningState"
+                            logger.Trace "GetRunningState"
                             replychannel.Reply <| Response(state.RunningState)
                             return! loop state
                         |   GetEngineServices replychannel ->
-                            logger.Debug "GetEngineServices"
+                            logger.Trace "GetEngineServices"
                             match state.EngineServices with
                             |   None       -> replychannel.Reply <| ERROR(FileComponentException("This consumer is not connected with a route-engine"))
                             |   Some value -> replychannel.Reply <| Response(value)
@@ -299,7 +299,7 @@ type File(props : Properties, initialState: State) as this =
                 result.GetResponseOrRaise()
 
         member this.Validate() =
-            logger.Debug("Validate()")
+            logger.Trace("Validate()")
             let servicesResponse = agent.PostAndReply(fun replychannel -> GetEngineServices(replychannel))
             let services = servicesResponse.GetResponseOrRaise()
             let fileListenerList = services.producerList<File>()
@@ -313,7 +313,7 @@ type File(props : Properties, initialState: State) as this =
                         match fp.Properties.Path with
                         | Fixed refPath -> (refPath = propertiesPath)
                         | _ -> false)
-                logger.Debug(sprintf "Is valid: %b" <| not(invalid))
+                logger.Trace(sprintf "Is valid: %b" <| not(invalid))
                 not(invalid)
             |   _ -> true
 
@@ -329,7 +329,7 @@ type File(props : Properties, initialState: State) as this =
     member private this.Consume (message:Message) =
         try
             let path = getPath (Some message)
-            logger.Debug(sprintf "Write message to path: %s" path)
+            logger.Debug(sprintf "Write message to path: '%s'" path)
             this.writeFile path message
             message
         with
@@ -343,7 +343,7 @@ type File(props : Properties, initialState: State) as this =
     interface IConsumerDriver with
         member self.GetConsumerHook 
             with get() = 
-                logger.Debug("GetConsumerHook.get()")
+                logger.Trace("GetConsumerHook.get()")
                 this.Consume
 
     interface IRegisterEngine with

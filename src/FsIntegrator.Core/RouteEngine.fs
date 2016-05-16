@@ -7,24 +7,62 @@ open FsIntegrator.Core.General
 
 [<AutoOpen>]
 module RouteEngine =
-    let logger = LogManager.GetLogger("debug")
+    let logger = LogManager.GetLogger("FsIntegrator.Core.RouteEngine")
 
     let AsProducerDriver (ip:IProducer) =
         ip :?> ``Provide a Producer Driver``
 
-    let rec ExecuteRouteForMessage (route : DefinitionType list) (initialMessage : Message) =
-        route 
-        |> List.fold(fun currentMessage definitionType ->
-            match definitionType with
-            |   ProcessStep func -> func currentMessage
-            |   Consume(consumerComponent, func) -> func currentMessage
-            |   Choose conditionList ->
-                //  choose the first condition that complies
-                let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(currentMessage) then Some(condition) else None)
-                match firstChoice with
-                |   None           -> currentMessage   //  continue with input message
-                |   Some condition -> ExecuteRouteForMessage (condition.Route) initialMessage               
-        ) initialMessage 
+
+    type RouteState = {
+        Message         : Message;
+        ErrorHandler    : ErrorHandlerRoute list
+    }
+    with
+        static member Create m eh = { Message = m;  ErrorHandler = eh }
+        member this.UpdateMessage m = {this with Message = m}
+        member this.NewErrorHandler eh = {this with ErrorHandler = eh }
+
+
+    let rec ExecuteRouteForMessage (initialRoute : DefinitionType list) (initialMessage : Message) : Message =
+        let rec ExecuteRoute route currentState =
+            match route with
+            |   []  -> currentState.Message
+            |   definitionType :: rest ->
+                try
+                    let currentMessage = currentState.Message
+                    let newState = 
+                        match definitionType with
+                        |   ProcessStep func ->
+                            logger.Trace "ExecuteRoute: ProcessStep"
+                            func currentMessage |> currentState.UpdateMessage
+                        |   Consume(consumerComponent, func) -> 
+                            logger.Trace("ExecuteRoute: Consumer")
+                            func currentMessage |> currentState.UpdateMessage                           
+                        |   Choose conditionList ->
+                            logger.Trace("ExecuteRoute: Condition")
+                            //  choose the first condition that complies
+                            let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(currentMessage) then Some(condition) else None)
+                            match firstChoice with
+                            |   None           -> currentState   //  continue without changes
+                            |   Some condition -> ExecuteRouteForMessage (condition.Route) currentMessage |> currentState.UpdateMessage
+                        |   ErrorHandlers handlers -> handlers |> currentState.NewErrorHandler
+                    ExecuteRoute rest newState
+                with
+                |   e -> 
+                    logger.Trace("ExecuteRoute: Error occurred")
+                    let currentErrorHandler = currentState.ErrorHandler
+                    let firstChoice = currentErrorHandler |> List.tryPick(fun handler -> if handler.CanHandle(e) then Some(handler) else None)
+                    match firstChoice with
+                    |   None                -> reraise()
+                    |   Some handler        -> 
+                        match handler.ErrorHandlerType with
+                        |   Divert  ->  
+                            logger.Info(sprintf "ExecuteRoute: Divert Error:\n%A" e)
+                            ExecuteRouteForMessage (handler.Route) (currentState.Message)
+                        |   Equip   ->
+                            logger.Error(sprintf "ExecuteRoute: Equip Error\n%A" e)
+                            ExecuteRouteForMessage (handler.Route) (currentState.Message) |> ignore ; reraise()
+        ExecuteRoute initialRoute (RouteState.Create initialMessage [])
 
 
     type RouteInfo = {
@@ -105,7 +143,10 @@ module RouteEngine =
                         let overview = state.Routes |> List.map(fun routeItem -> routeItem.Route)
                         replyChannel.Reply overview
                 with
-                | _ as e -> printfn "Uncaught exception: %A" e
+                | _ as e ->
+                    let msg = sprintf "Uncaught exception: %A" e
+                    printfn "%s" msg 
+                    logger.Error(msg)
                 return! loop state
             }
             loop (State.Create())

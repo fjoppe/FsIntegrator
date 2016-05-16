@@ -129,7 +129,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         if state.RunningState = targetState then state
         else 
             let newState = witProducerHookOrFail state action
-            logger.Debug(sprintf "Changing running state to: %A" targetState)
+            logger.Trace(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
 
     //  Start listening for messages
@@ -158,7 +158,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
         let processMessage send =
             let amqMessage = consumer.Receive()
-            logger.Debug(sprintf "Received message from: %s - %A" (getDestination None) props.DestinationType)
+            logger.Debug(sprintf "Received message from: '%s', which is a '%A'" (getDestination None) props.DestinationType)
             sendMessage send amqMessage 
 
 
@@ -173,7 +173,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         }
         Async.Start(loop(), cancellationToken = state.Cancellation.Token)       
         connection.Start()
-        logger.Debug(sprintf "Started ActiveMQ Listener for destination: %s - %A" (getDestination None) props.DestinationType)
+        logger.Debug(sprintf "Started ActiveMQ Listener for destination: '%s', which is a '%A'" (getDestination None) props.DestinationType)
         { state with Connection = Some connection; Session = Some session}
 
         
@@ -219,24 +219,24 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             let rec loop (state:State) = 
                 async {
                     try
-                        logger.Debug "Waiting for message.."
+                        logger.Trace "Waiting for message.."
                         let! command = inbox.Receive()
                         match command with
                         |   SetProducerHook (hook, replychannel) -> 
-                            logger.Debug "SetProducerHook"
+                            logger.Trace "SetProducerHook"
                             return! loop <| actionReply state replychannel (fun () -> state.SetProducerHook hook)
                         |   SetEngineServices (svc, replychannel) -> 
-                            logger.Debug "SetEngineServices"
+                            logger.Trace "SetEngineServices"
                             return! loop <| actionReply state replychannel (fun () -> state.SetEngineServices (Some svc))
                         |   ChangeRunningState (targetState, action, replychannel) ->
-                            logger.Debug(sprintf "ChangeRunningState to: %A" targetState)
+                            logger.Trace(sprintf "ChangeRunningState to: %A" targetState)
                             return! loop <| actionReply state replychannel (fun () -> changeRunningState state targetState (fun () -> action state))
                         |   GetRunningState replychannel ->
-                            logger.Debug "GetRunningState"
+                            logger.Trace "GetRunningState"
                             replychannel.Reply <| Response(state.RunningState)
                             return! loop state
                         |   GetSession replychannel ->
-                            logger.Debug "GetSession"
+                            logger.Trace "GetSession"
                             let connection = getOrCreate (state.Connection) (fun () -> getActiveMQConnection())
                             let session = getOrCreate (state.Session) (fun () -> connection.CreateSession(AcknowledgementMode.ClientAcknowledge))
                             replychannel.Reply <| Response(session)
@@ -289,7 +289,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             let destinationName = getDestination (Some message)
             let destination = SessionUtil.GetDestination(session, destinationName, convertToActiveMQ props.DestinationType)
             let producer = session.CreateProducer(destination)
-            logger.Debug(sprintf "Send message to %s - %A" destinationName props.DestinationType)
+            logger.Debug(sprintf "Send message to '%s' which is a '%A'" destinationName props.DestinationType)
             let messageToSend = producer.CreateTextMessage(message.Body)
             producer.Send(messageToSend)
             message
@@ -305,7 +305,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
     interface IConsumerDriver with
         member self.GetConsumerHook
             with get() =
-                logger.Debug("GetConsumerHook.get()")
+                logger.Trace("GetConsumerHook.get()")
                 let sessionResponse = agent.PostAndReply(fun replychannel -> GetSession(replychannel))
                 let session = sessionResponse.GetResponseOrRaise()
                 this.Consume session

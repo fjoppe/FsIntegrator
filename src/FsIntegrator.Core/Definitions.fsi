@@ -9,6 +9,7 @@ type DefinitionType =
     | ProcessStep of (General.Message -> General.Message)
     | Consume     of IConsumer * (Message -> Message)
     | Choose      of ConditionalRoute list
+    | ErrorHandlers of ErrorHandlerRoute list
 and
     [<Sealed>]
     Route
@@ -39,4 +40,22 @@ and
         member internal SetRoute : DefinitionType list -> ConditionalRoute
         member internal Register : IEngineServices -> unit
         member internal Evaluate : Message -> bool
+and
+    ErrorHandlerType = 
+        | Divert    //  send the message to a different route, afterwards it is no more considered as error
+        | Equip     //  equip the error with some logic, before termination
+and
+    ErrorHandlerRoute
+and
+    ErrorHandlerRoute with
+        static member   Create : DefinitionType list -> ErrorHandlerType -> Type list -> ErrorHandlerRoute
+        member          Id : Guid with get
+        member internal ErrorHandlerType : ErrorHandlerType with get
+        member internal HandledTypes : Type list with get
+        member internal Route :  DefinitionType list with get
+        member internal SetRoute : DefinitionType list  -> ErrorHandlerRoute
+
+        member internal Register : IEngineServices -> unit
+        member          CanHandle : 'a -> bool
+
 
