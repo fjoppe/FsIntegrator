@@ -25,43 +25,50 @@ module RouteEngine =
 
     let rec ExecuteRouteForMessage (initialRoute : DefinitionType list) (initialMessage : Message) : Message =
         let rec ExecuteRoute route currentState =
-            match route with
-            |   []  -> currentState.Message
-            |   definitionType :: rest ->
-                try
-                    let currentMessage = currentState.Message
-                    let newState = 
-                        match definitionType with
-                        |   ProcessStep func ->
-                            logger.Trace "ExecuteRoute: ProcessStep"
-                            func currentMessage |> currentState.UpdateMessage
-                        |   Consume(consumerComponent, func) -> 
-                            logger.Trace("ExecuteRoute: Consumer")
-                            func currentMessage |> currentState.UpdateMessage                           
-                        |   Choose conditionList ->
-                            logger.Trace("ExecuteRoute: Condition")
-                            //  choose the first condition that complies
-                            let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(currentMessage) then Some(condition) else None)
-                            match firstChoice with
-                            |   None           -> currentState   //  continue without changes
-                            |   Some condition -> ExecuteRouteForMessage (condition.Route) currentMessage |> currentState.UpdateMessage
-                        |   ErrorHandlers handlers -> handlers |> currentState.NewErrorHandler
-                    ExecuteRoute rest newState
-                with
-                |   e -> 
-                    logger.Trace("ExecuteRoute: Error occurred")
-                    let currentErrorHandler = currentState.ErrorHandler
-                    let firstChoice = currentErrorHandler |> List.tryPick(fun handler -> if handler.CanHandle(e) then Some(handler) else None)
-                    match firstChoice with
-                    |   None                -> reraise()
-                    |   Some handler        -> 
-                        match handler.ErrorHandlerType with
-                        |   Divert  ->  
-                            logger.Info(sprintf "ExecuteRoute: Divert Error:\n%A" e)
-                            ExecuteRouteForMessage (handler.Route) (currentState.Message)
-                        |   Equip   ->
-                            logger.Error(sprintf "ExecuteRoute: Equip Error\n%A" e)
-                            ExecuteRouteForMessage (handler.Route) (currentState.Message) |> ignore ; reraise()
+            let nextStep =
+                match route with
+                |   []  -> None                 //  currentState.Message
+                |   definitionType :: rest ->
+                    try
+                        let currentMessage = currentState.Message
+                        let newState = 
+                            match definitionType with
+                            |   ProcessStep func ->
+                                logger.Trace "ExecuteRoute: ProcessStep"
+                                func currentMessage |> currentState.UpdateMessage
+                            |   Consume(consumerComponent, func) -> 
+                                logger.Trace("ExecuteRoute: Consumer")
+                                func currentMessage |> currentState.UpdateMessage                           
+                            |   Choose conditionList ->
+                                logger.Trace("ExecuteRoute: Condition")
+                                //  choose the first condition that complies
+                                let firstChoice = conditionList |> List.tryPick(fun condition -> if condition.Evaluate(currentMessage) then Some(condition) else None)
+                                match firstChoice with
+                                |   None           -> currentState   //  continue without changes
+                                |   Some condition -> ExecuteRouteForMessage (condition.Route) currentMessage |> currentState.UpdateMessage
+                            |   ErrorHandlers handlers -> handlers |> currentState.NewErrorHandler
+                        Some(fun () -> ExecuteRoute rest newState)  // put recursive call outside the try..with block
+                    with
+                    |   e -> 
+                        logger.Trace("ExecuteRoute: Error occurred")
+                        let currentErrorHandler = currentState.ErrorHandler
+                        let firstChoice = currentErrorHandler |> List.tryPick(fun handler -> if handler.CanHandle(e) then Some(handler) else None)
+                        match firstChoice with
+                        |   None                -> reraise()
+                        |   Some handler        -> 
+                            match handler.ErrorHandlerType with
+                            |   Divert  ->  
+                                logger.Info(sprintf "ExecuteRoute: Divert Error:\n%A" e)
+                                // put recursive call outside the try..with block
+                                Some(fun () -> ExecuteRouteForMessage (handler.Route) (currentState.Message))
+                            |   Equip   ->
+                                logger.Error(sprintf "ExecuteRoute: Equip Error\n%A" e)
+                                ExecuteRouteForMessage (handler.Route) (currentState.Message) |> ignore
+                                logger.Trace("reraise()")
+                                reraise()   // must exit the recursive loop (and that's why we call the nextStep outside the try..with block)
+            match nextStep with
+            |   None        -> currentState.Message
+            |   Some(func)  ->  func()
         ExecuteRoute initialRoute (RouteState.Create initialMessage [])
 
 

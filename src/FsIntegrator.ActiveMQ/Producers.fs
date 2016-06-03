@@ -7,8 +7,9 @@ module ActiveMQProducerDefaults =
     let connection = Connection("activemq:tcp://localhost:61616")
     let destinationType = DestinationType(DestinationType.Queue)
     let concurrentTasks = ConcurrentTasks(1)
+    let redeliveryPolicy = RedeliveryPolicy({MaxRedelivery = 0; InitialDelay = 0; Delay = 0})
 
-    let defaultProducerOptions = [connection;destinationType;concurrentTasks]
+    let defaultProducerOptions = [connection;destinationType;concurrentTasks; redeliveryPolicy]
 
 module Producers =
     type From = struct end

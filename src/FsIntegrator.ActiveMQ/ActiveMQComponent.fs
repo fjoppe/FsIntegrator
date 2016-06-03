@@ -19,24 +19,33 @@ type DestinationType =
     |   Topic
 
 
+type RedeliveryPolicy = {
+        MaxRedelivery   : int
+        InitialDelay    : int
+        Delay           : int
+    }
+    with
+        static member Empty = {MaxRedelivery = 0; InitialDelay = 0; Delay = 0}
+
 type AMQOption =
     |   Connection  of string
     |   Credentials of Credentials
     |   DestinationType of DestinationType
-    |  ConcurrentTasks of int
-
+    |   ConcurrentTasks of int
+    |   RedeliveryPolicy of RedeliveryPolicy
 
 type DestinationNameType =
     |   Fixed       of string
     |   Evaluate    of StringMacro
 
 type Properties = {
-        Id              : Guid
-        Destination     : DestinationNameType
-        Connection      : Uri
-        Credentials     : Credentials option
-        DestinationType : DestinationType
-        ConcurrentTasks : int
+        Id               : Guid
+        Destination      : DestinationNameType
+        Connection       : Uri
+        Credentials      : Credentials option
+        DestinationType  : DestinationType
+        ConcurrentTasks  : int
+        RedeliveryPolicy : RedeliveryPolicy
     }
     with
     static member convertOptions options =
@@ -47,6 +56,7 @@ type Properties = {
             Connection = new Uri("urn:invalid")
             Credentials = None
             ConcurrentTasks = -1
+            RedeliveryPolicy = RedeliveryPolicy.Empty
         }
         options 
         |> List.fold (fun state option ->
@@ -59,6 +69,7 @@ type Properties = {
                     {state with ConcurrentTasks = amount}
                 else
                     raise <| ActiveMQComponentException "ERROR: ConcurrentTasks must be larger than 0"
+            |   RedeliveryPolicy(rp) -> {state with RedeliveryPolicy = rp}
         ) defaultOptions
 
     static member Create destination options = 
@@ -135,7 +146,15 @@ type ActiveMQ(props : Properties, initialState : State) as this =
     //  Start listening for messages
     let startListening state =
         let connection = getActiveMQConnection()
+
+        let policy = connection.RedeliveryPolicy
+        policy.MaximumRedeliveries <- props.RedeliveryPolicy.MaxRedelivery
+        policy.InitialRedeliveryDelay <- props.RedeliveryPolicy.InitialDelay
+        policy.RedeliveryDelay(props.RedeliveryPolicy.Delay) |> ignore
+
+
         let session = connection.CreateSession(AcknowledgementMode.ClientAcknowledge)
+        
         let destination = SessionUtil.GetDestination(session, (getDestination None), convertToActiveMQ props.DestinationType)
 
         let consumer = session.CreateConsumer(destination)

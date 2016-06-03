@@ -13,6 +13,14 @@ type DestinationType =
     |   Queue
     |   Topic
 
+type RedeliveryPolicy = {
+        /// Maximum tries of redelivery
+        MaxRedelivery   : int
+        /// Initial delay (ms) for redelivery
+        InitialDelay    : int
+        /// Standard delay (ms) between redeliveries
+        Delay           : int
+    }
 
 type AMQOption =
     /// The Uri to the ActiveMQ service, in the form of "activemq:tcp://yourhost:61616"
@@ -23,6 +31,8 @@ type AMQOption =
     |   DestinationType of DestinationType
     /// The amount of concurrent tasks which process in parallel
     |  ConcurrentTasks of int
+    /// The redelivery policy
+    |   RedeliveryPolicy of RedeliveryPolicy
 
 
 type ActiveMQ = 
