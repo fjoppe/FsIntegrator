@@ -112,8 +112,7 @@ type SubRoute(props : Properties, initialState: State) as this =
                         let result = sendToRoute message
                         replyChannel.Reply(Response(result))
                     with
-                    |   e -> 
-                        replyChannel.Reply(ERROR(e))
+                    |   e ->  replyChannel.Reply(ERROR(e))
                     return! loop()
                 }
                 loop()

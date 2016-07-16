@@ -28,6 +28,8 @@
     <OtherFlags>--sig:$(OutputPath)\all.fsi</OtherFlags>
     <NoWarn>
     </NoWarn>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>25</WarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>

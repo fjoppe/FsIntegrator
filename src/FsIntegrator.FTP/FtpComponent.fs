@@ -47,18 +47,20 @@ type FtpOption =
     |   AfterError   of (Message -> FtpScript)
     |   ConcurrentTasks of int
     |  TransferMode of TransferMode
+    |  EndpointFailureStrategy of EndpointFailureStrategy
 
 
 module FtpInternal =
     let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
     type Options = {
-            Interval        : float<s>
-            Credentials     : Credentials option
-            AfterSuccess    : (Message -> FtpScript)
-            AfterError      : (Message -> FtpScript)
-            ConcurrentTasks : int
-            TransferMode    : TransferMode
+            Interval                : float<s>
+            Credentials             : Credentials option
+            AfterSuccess            : (Message -> FtpScript)
+            AfterError              : (Message -> FtpScript)
+            ConcurrentTasks         : int
+            TransferMode            : TransferMode
+            EndpointFailureStrategy : EndpointFailureStrategy
         }
 
     type PathType =
@@ -81,6 +83,7 @@ module FtpInternal =
                 AfterError = fun _ -> FtpScript.Empty
                 ConcurrentTasks = 0
                 TransferMode = TransferMode.Active
+                EndpointFailureStrategy = EndpointFailureStrategy.StopImmediately
             }
             options 
             |> List.fold (fun state option ->
@@ -93,8 +96,11 @@ module FtpInternal =
                     if amount > 0 then
                         {state with ConcurrentTasks = amount}
                     else
-                        raise <| FtpComponentException "ERROR: ConcurrentTasks must be larger than 0"
+                        raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
                 |   TransferMode(mode)  -> {state with TransferMode = mode}
+                |   EndpointFailureStrategy(strategy) ->
+                        strategy.Validate()
+                        {state with EndpointFailureStrategy = strategy}
             ) defaultOptions
 
         static member Create path connection options = 
@@ -226,7 +232,7 @@ type Ftp(props : Properties, initialState : State) as this =
                 fsRun <| props.Options.AfterError message
 
         /// Poll a target for files and process them. The polling stops when busy with a batch of files.
-        let rec loop() = async {
+        let rec loop retryCount = async {
             let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
 
             let sendToRoute = state.ProducerHook .Value
@@ -240,13 +246,27 @@ type Ftp(props : Properties, initialState : State) as this =
                     )
                 |> List.sortBy (fun fileInfo -> fileInfo.Created)
                 |> List.iter(fun fileInfo -> state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
+                return! loop(None)
             with
-            |   e -> logger.Error e
+            |   e -> 
+                logger.Error e
+                let sleepAndLoop wt s =
+                    let waitInMs = wt |> Utility.secsToMsFloat
+                    Async.Sleep <| int(waitInMs) |> Async.RunSynchronously
+                    loop(Some s)
+                match props.Options.EndpointFailureStrategy with
+                |  EndpointFailureStrategy.WaitAndRetryInfinite wt -> return! (sleepAndLoop wt 0)
+                |  EndpointFailureStrategy.WaitAndRetryCountDownBeforeStop(wt, cnt) ->
+                    match retryCount with
+                    |   Some(x) -> 
+                        if(x < cnt) then return! (sleepAndLoop wt (x+1))
+                        else (this :> IProducerDriver).Stop()
+                    |   None    -> return! (sleepAndLoop wt 1)
+                |  StopImmediately -> (this :> IProducerDriver).Stop()
 
-            return! loop()
         }
         state.Timer.Start()
-        Async.Start(loop(), cancellationToken = state.Cancellation.Token)
+        Async.Start(loop(None), cancellationToken = state.Cancellation.Token)
         logger.Debug(sprintf "Started FTP Listener for path: %s" (getPath None))
         { state with FtpClient = client }
 

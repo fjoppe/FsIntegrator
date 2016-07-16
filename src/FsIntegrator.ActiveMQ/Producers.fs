@@ -1,13 +1,15 @@
 ﻿namespace FsIntegrator
 
 open System
-
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 module ActiveMQProducerDefaults =
     let connection = Connection("activemq:tcp://localhost:61616")
     let destinationType = DestinationType(DestinationType.Queue)
     let concurrentTasks = ConcurrentTasks(1)
     let redeliveryPolicy = RedeliveryPolicy({MaxRedelivery = 0; InitialDelay = 0; Delay = 0})
+
+    let endpointFailureStrategy = AMQOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
 
     let defaultProducerOptions = [connection;destinationType;concurrentTasks; redeliveryPolicy]
 

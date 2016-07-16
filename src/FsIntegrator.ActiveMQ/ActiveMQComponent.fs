@@ -32,6 +32,7 @@ type AMQOption =
     |   DestinationType of DestinationType
     |   ConcurrentTasks of int
     |   RedeliveryPolicy of RedeliveryPolicy
+    |   EndpointFailureStrategy of EndpointFailureStrategy
 
 module ActiveMQInternal=
 
@@ -47,6 +48,7 @@ module ActiveMQInternal=
             DestinationType  : DestinationType
             ConcurrentTasks  : int
             RedeliveryPolicy : RedeliveryPolicy
+            EndpointFailureStrategy : EndpointFailureStrategy
         }
         with
         static member convertOptions options =
@@ -58,6 +60,7 @@ module ActiveMQInternal=
                 Credentials = None
                 ConcurrentTasks = -1
                 RedeliveryPolicy = RedeliveryPolicy.Empty
+                EndpointFailureStrategy = EndpointFailureStrategy.StopImmediately
             }
             options 
             |> List.fold (fun state option ->
@@ -69,8 +72,11 @@ module ActiveMQInternal=
                     if amount > 0 then
                         {state with ConcurrentTasks = amount}
                     else
-                        raise <| ActiveMQComponentException "ERROR: ConcurrentTasks must be larger than 0"
+                        raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
                 |   RedeliveryPolicy(rp) -> {state with RedeliveryPolicy = rp}
+                |   EndpointFailureStrategy(strategy) ->
+                       strategy.Validate()
+                       {state with EndpointFailureStrategy = strategy}
             ) defaultOptions
 
         static member Create destination options = 
@@ -106,7 +112,7 @@ open ActiveMQInternal
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type ActiveMQ(props : Properties, initialState : State) as this = 
 
-    let logger = LogManager.GetLogger(this.GetType().FullName); 
+    let logger = LogManager.GetLogger(this.GetType().FullName)
 
     let getDestination (message: FsIntegrator.Message option) =
         match props.Destination with
@@ -182,16 +188,29 @@ type ActiveMQ(props : Properties, initialState : State) as this =
             sendMessage send amqMessage 
 
 
-        let rec loop() = async {
+        let rec loop retryCount = async {
             let sendToRoute = state.ProducerHook.Value
             try
                 state.TaskPool.PooledAction(fun () -> processMessage sendToRoute)
+                return! loop(None)
             with
-            |   e -> printfn "%A" e
-                     logger.Error e
-            return! loop()
+            |   e ->
+                logger.Error e
+                let sleepAndLoop wt s =
+                    let waitInMs = wt |> Utility.secsToMsFloat
+                    Async.Sleep <| int(waitInMs) |> Async.RunSynchronously
+                    loop(Some s)
+                match props.EndpointFailureStrategy with
+                |  EndpointFailureStrategy.WaitAndRetryInfinite wt -> return! (sleepAndLoop wt 0)
+                |  EndpointFailureStrategy.WaitAndRetryCountDownBeforeStop(wt, cnt) ->
+                    match retryCount with
+                    |   Some(x) -> 
+                        if(x < cnt) then return! (sleepAndLoop wt (x+1))
+                        else (this :> IProducerDriver).Stop()
+                    |   None    -> return! (sleepAndLoop wt 1)
+                |  StopImmediately -> (this :> IProducerDriver).Stop()
         }
-        Async.Start(loop(), cancellationToken = state.Cancellation.Token)       
+        Async.Start(loop(None), cancellationToken = state.Cancellation.Token)       
         connection.Start()
         logger.Debug(sprintf "Started ActiveMQ Listener for destination: '%s', which is a '%A'" (getDestination None) props.DestinationType)
         { state with Connection = Some connection; Session = Some session}
@@ -204,14 +223,12 @@ type ActiveMQ(props : Properties, initialState : State) as this =
         |   None          -> 
             let msg = "ActiveMQ has no Session set, this may never occur!"
             logger.Error(msg)
-            printfn "%s"msg
 
         match state.Connection with
         |   Some connection  -> connection.Close() ; connection.Dispose()
         |   None             -> 
             let msg = "ActiveMQ has no Connection set, this may never occur!"
             logger.Error(msg)
-            printfn "%s"msg
         logger.Debug(sprintf "Stopped ActiveMQ Listener for destination: %s - %A" (getDestination None) props.DestinationType)
         { state with Connection = None; Session = None; Cancellation = new CancellationTokenSource()} // the CancellationToken is not reusable, so we make this for the next "start"
 

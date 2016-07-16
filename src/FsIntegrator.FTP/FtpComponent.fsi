@@ -43,6 +43,8 @@ type FtpOption =
     |  ConcurrentTasks of int
     /// The transfer mode
     |  TransferMode of TransferMode
+    /// Which strategy to follow when the endpoint is failing
+    |  EndpointFailureStrategy of EndpointFailureStrategy
 
 type Ftp = 
     class

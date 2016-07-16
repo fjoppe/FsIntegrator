@@ -2,6 +2,7 @@
 
 open System
 open FSharpx.Control
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 module Utility =
     type RestrictedResourcePool  = {
@@ -50,4 +51,4 @@ module Utility =
     type ActionAsyncResponse = AsyncReplyChannel<ActionResponse>
     type FunctionsAsyncResponse<'a> = AsyncReplyChannel<FunctionResponse<'a>>
 
-    
+    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>

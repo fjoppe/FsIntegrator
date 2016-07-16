@@ -31,7 +31,8 @@ type AMQOption =
     |  ConcurrentTasks of int
     /// The redelivery policy
     |   RedeliveryPolicy of RedeliveryPolicy
-
+    /// Which strategy to follow when the endpoint is failing
+    |  EndpointFailureStrategy of EndpointFailureStrategy
 
 type ActiveMQ = 
     class

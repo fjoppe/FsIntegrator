@@ -2,10 +2,12 @@
 
 open System
 open System.Reflection
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 type Agent<'a>  = MailboxProcessor<'a>
 
 exception MessageFormatException of string
+exception ValidationException of string
     
 type HeaderType = {
         General  : Map<string,string>
@@ -40,6 +42,20 @@ type Credentials = {
 }
 with
     static member Create username password = { Username = username; Password = password}
+
+
+type EndpointFailureStrategy =
+    |   WaitAndRetryInfinite of float<s>
+    |   WaitAndRetryCountDownBeforeStop of float<s> * int
+    |   StopImmediately
+    with
+        member this.Validate() =
+            match this with
+            |   WaitAndRetryInfinite wt -> if wt < 0.01<s> then raise (ValidationException "WaitAndRetryInfinite(wt): wt must be greater than 0.01<s>")
+            |   WaitAndRetryCountDownBeforeStop(wt, cnt) -> 
+                if wt < 0.01<s> then raise(ValidationException "WaitAndRetryCountDownBeforeStop (wt,cnt): wt must be greater than 0.01<s>")
+                if cnt <1 then raise(ValidationException "WaitAndRetryCountDownBeforeStop (wt,cnt): cnt must be greater than 0")
+            |   StopImmediately -> ()
 
 [<Interface>]
 type IProducer = interface end

@@ -24,6 +24,8 @@ type FileOption =
     |   AfterError of (Message -> FSScript)
     /// The amount of concurrent tasks which process in parallel
     |  ConcurrentTasks of int
+    /// Which strategy to follow when the endpoint is failing
+    |  EndpointFailureStrategy of EndpointFailureStrategy
 
 
 type File =

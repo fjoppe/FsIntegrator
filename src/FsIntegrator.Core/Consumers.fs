@@ -5,12 +5,14 @@ open System.Xml.XPath
 open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.MessageOperations
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 
 module FileConsumerDefaults =
     let afterSuccessDefault = NoFileScript
     let afterErrorDefault  = NoFileScript
-    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
+    let endpointFailureStrategy = FileOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
+    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); endpointFailureStrategy]
 
 module SubRouteConsumerDefaults =
     let defaultConsumerOptions = []

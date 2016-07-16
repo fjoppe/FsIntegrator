@@ -285,7 +285,7 @@ let createIndexFsx lang =
 #I "../../../bin"
 
 (**
-F# Project Scaffold ({0})
+FsIntegrator ({0})
 =========================
 *)
 """

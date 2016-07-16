@@ -2,7 +2,7 @@
 
 open System.IO
 open FsIntegrator.Core
-
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 module FileProducerDefaults =
     let subDir source sub =
@@ -34,7 +34,9 @@ module FileProducerDefaults =
                     }
             |   None      -> failwith "No file headers found! If you see this error, then it is a framework issue."
 
-    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); ConcurrentTasks(1)]
+    let endpointFailureStrategy = FileOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
+
+    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); ConcurrentTasks(1); endpointFailureStrategy]
 
 module SubRouteProducerDefaults =
 

@@ -26,17 +26,18 @@ type FileOption =
      |  AfterSuccess of (Message -> FSScript)
      |  AfterError   of (Message -> FSScript)
      |  ConcurrentTasks of int
+     |  EndpointFailureStrategy of EndpointFailureStrategy
 
 
 module FileInternal =
-    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
-    type FileOptions = {
+    type Options = {
          Interval           : float<s>
          CreateIfNotExists  : bool
          AfterSuccess       : (Message -> FSScript)
          AfterError         : (Message -> FSScript)
          ConcurrentTasks    : int
+         EndpointFailureStrategy : EndpointFailureStrategy
         }
 
     type PathType =
@@ -47,7 +48,7 @@ module FileInternal =
     type Properties = {
             Id           : Guid
             Path         : PathType
-            Options      : FileOptions
+            Options      : Options
         }
         with
         /// Converts a list of FileOption into an Option record. Each given option overrides a default, so the defaults are coded here.
@@ -63,6 +64,7 @@ module FileInternal =
                 AfterSuccess = fun _ -> FSScript.Empty
                 AfterError = fun _ -> FSScript.Empty
                 ConcurrentTasks = 0
+                EndpointFailureStrategy = EndpointFailureStrategy.StopImmediately
             }
             options 
             |> List.fold (fun state option ->
@@ -72,10 +74,13 @@ module FileInternal =
                 |   AfterSuccess(func)       -> {state with AfterSuccess = func}
                 |   AfterError(func)         -> {state with AfterError = func}
                 |   ConcurrentTasks(amount)  -> 
-                    if amount > 0 then
-                        {state with ConcurrentTasks = amount}
-                    else
-                        raise <| FileComponentException "ERROR: ConcurrentTasks must be larger than 0"
+                       if amount > 0 then
+                           {state with ConcurrentTasks = amount}
+                       else
+                           raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
+                |  EndpointFailureStrategy(strategy) ->
+                       strategy.Validate()
+                       {state with EndpointFailureStrategy = strategy}
             ) defaultOptions
 
         static member Create path options = 
@@ -93,7 +98,7 @@ module FileInternal =
         }
         with
         static member Create convertedOptions = 
-            let timer = new Timer(secsToMsFloat <| convertedOptions.Interval)
+            let timer = new Timer(Utility.secsToMsFloat <| convertedOptions.Interval)
             {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
 
         member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
@@ -106,6 +111,7 @@ module FileInternal =
         |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
         |   GetRunningState of FunctionsAsyncResponse<ProducerState>
         |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
+
 
 open FileInternal
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
@@ -133,6 +139,13 @@ type File(props : Properties, initialState: State) as this =
             let newState = witProducerHookOrFail state action
             logger.Trace(sprintf "Changing running state to: %A" targetState)
             {newState with RunningState = targetState}
+
+    /// Stop File polling
+    let stopFilePolling state = 
+        state.Timer.Stop()
+        state.Cancellation.Cancel()
+        logger.Debug(sprintf "Stopped FileListener for path: '%s'" (getPath None))
+        {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     /// State File polling
     let startFilePolling state = 
@@ -170,9 +183,7 @@ type File(props : Properties, initialState: State) as this =
                 try
                     FSScript.Run <| action
                 with
-                |  e -> 
-                    printfn "Exception! %A" e
-                    logger.Error(e)
+                |  e -> logger.Error e
             //#endregion
 
             let content = getXmlContent fileInfo
@@ -189,7 +200,7 @@ type File(props : Properties, initialState: State) as this =
                 logger.Debug(sprintf "File processing ERROR, called AfterError() for '%s'" fileInfo.FullName)
 
         /// Poll a target for files and process them. The polling stops when busy with a batch of files.
-        let rec loop() = async {
+        let rec loop retryCount = async {
             let! waitForElapsed = Async.AwaitEvent state.Timer.Elapsed
 
             let sendToRoute = state.ProducerHook.Value
@@ -200,22 +211,29 @@ type File(props : Properties, initialState: State) as this =
                     |> List.iter(fun fileInfo -> 
                         logger.Debug(sprintf "Received file: '%s'" fileInfo.FullName)
                         state.TaskPool.PooledAction(fun () -> processFile fileInfo sendToRoute))
+                return! loop(None)
             with
-            |   e -> printfn "%A" e; logger.Error e
-
-            return! loop()
+            |   e -> 
+                logger.Error e
+                let sleepAndLoop wt s =
+                    let waitInMs = wt |> Utility.secsToMsFloat
+                    Async.Sleep <| int(waitInMs) |> Async.RunSynchronously
+                    loop(Some s)
+                match props.Options.EndpointFailureStrategy with
+                |  EndpointFailureStrategy.WaitAndRetryInfinite wt -> return! (sleepAndLoop wt 0)
+                |  EndpointFailureStrategy.WaitAndRetryCountDownBeforeStop(wt, cnt) ->
+                    match retryCount with
+                    |   Some(x) -> 
+                        if(x < cnt) then return! (sleepAndLoop wt (x+1))
+                        else (this :> IProducerDriver).Stop()
+                    |   None    -> return! (sleepAndLoop wt 1)
+                |  StopImmediately -> (this :> IProducerDriver).Stop()
         }
         state.Timer.Start()
-        Async.Start(loop(), cancellationToken = state.Cancellation.Token)
+        Async.Start(loop(None), cancellationToken = state.Cancellation.Token)
         logger.Debug(sprintf "Started FileListener for path: '%s'" (getPath None))
         state
 
-
-    let stopFilePolling state = 
-        state.Timer.Stop()
-        state.Cancellation.Cancel()
-        logger.Debug(sprintf "Stopped FileListener for path: '%s'" (getPath None))
-        {state with Cancellation = new CancellationTokenSource()}   // the CancellationToken is not reusable, so we make this for the next "start"
 
     let agent = 
         let newAgent = new Agent<Operation>(fun inbox ->

@@ -2,6 +2,7 @@
 
 open FsIntegrator
 open FsIntegrator.MessageOperations
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 module FtpConsumerDefaults =
     let afterSuccessDefault = fun _ -> FtpScript.Empty
@@ -10,7 +11,9 @@ module FtpConsumerDefaults =
 
     let transferMode = FtpOption.TransferMode(TransferMode.Active)
 
-    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); transferMode]
+    let endpointFailureStrategy = FtpOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
+
+    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); transferMode; endpointFailureStrategy]
 
 
 module Consumers =

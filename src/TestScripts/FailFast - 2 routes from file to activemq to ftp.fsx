@@ -28,7 +28,6 @@ open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
 open FsIntegrator.RouteEngine
-open FsIntegrator.MessageOperations
 
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log

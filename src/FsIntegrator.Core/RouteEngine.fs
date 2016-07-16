@@ -152,7 +152,6 @@ module RouteEngine =
                 with
                 | _ as e ->
                     let msg = sprintf "Uncaught exception: %A" e
-                    printfn "%s" msg 
                     logger.Error(msg)
                 return! loop state
             }

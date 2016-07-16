@@ -3,6 +3,8 @@
 open FsIntegrator
 open FsIntegrator.Core
 open System.IO
+open FSharp.Data.UnitSystems.SI.UnitSymbols
+
 
 module FtpProducerDefaults =
     let subDir source sub =
@@ -37,7 +39,9 @@ module FtpProducerDefaults =
 
     let transferMode = FtpOption.TransferMode(TransferMode.Active)
 
-    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1);transferMode]
+    let endpointFailureStrategy = FtpOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
+
+    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1);transferMode;endpointFailureStrategy]
 
 
 module Producers =

@@ -1,9 +1,13 @@
 ﻿namespace FsIntegrator
 
 open FsIntegrator.MessageOperations
+open FSharp.Data.UnitSystems.SI.UnitSymbols
+
 
 module ActiveMQConsumerDefaults =
-    let defaultConsumerOptions = []
+    let endpointFailureStrategy = AMQOption.EndpointFailureStrategy(WaitAndRetryInfinite(5.0<s>))
+
+    let defaultConsumerOptions = [endpointFailureStrategy]
 
 
 module Consumers=
