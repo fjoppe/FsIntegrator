@@ -1,9 +1,8 @@
 ﻿namespace FsIntegrator
 
 open System.IO
-open FsIntegrator
-open FsIntegrator.Core.General
-open FsIntegrator.FileSystem
+open FsIntegrator.Core
+
 
 module FileProducerDefaults =
     let subDir source sub =

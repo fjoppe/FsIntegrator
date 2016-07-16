@@ -1,8 +1,8 @@
 ﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.Core
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator
+open FsIntegrator.MessageOperations
 
 module ErrorHandlers =
     

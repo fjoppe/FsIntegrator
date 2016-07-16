@@ -28,9 +28,7 @@ open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
-open FsIntegrator.Core.General
-open FsIntegrator.Core.RouteEngine
-open FsIntegrator.Core.Definitions
+open FsIntegrator.RouteEngine
 open FsIntegrator.ErrorHandlers
 
 

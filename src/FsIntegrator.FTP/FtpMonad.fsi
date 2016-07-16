@@ -11,6 +11,8 @@ type FtpScript
 
 type FtpBuilder =
     class
+        internal new : unit -> FtpBuilder
+
         member Yield : 'a -> FtpScript
 
         /// Move file to target
@@ -46,9 +48,3 @@ type FtpBuilder =
         member GetFile : fs : FtpScript * source : string * target : string -> FtpScript
     end
 
-
-module RemoteFileSystem =  
-    val ftp : FtpBuilder
-
-    /// Empty FTP Script (do nothing)
-    val NoFTPScript<'a> : 'a -> FtpScript

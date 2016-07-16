@@ -1,7 +1,7 @@
-﻿namespace FsIntegrator.Core
+﻿namespace FsIntegrator.RouteEngine
 
 open System
-open EngineParts
+open FsIntegrator
 
 [<AutoOpen>]
 module RouteEngine =

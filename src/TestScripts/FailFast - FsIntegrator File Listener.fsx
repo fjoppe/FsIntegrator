@@ -19,8 +19,8 @@ open System.IO
 open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
-open FsIntegrator.Core.RouteEngine
-open FsIntegrator.Core.Definitions
+open FsIntegrator.RouteEngine
+
 
 let fileListenerPath = Path.Combine( __SOURCE_DIRECTORY__, "../TestExamples/TestFileListener")
 

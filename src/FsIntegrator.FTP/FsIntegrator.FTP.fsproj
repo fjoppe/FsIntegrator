@@ -56,6 +56,7 @@
     <Compile Include="FtpMonad.fs" />
     <Compile Include="FtpComponent.fsi" />
     <Compile Include="FtpComponent.fs" />
+    <Compile Include="Core.fs" />
     <Compile Include="Producers.fsi" />
     <Compile Include="Producers.fs" />
     <Compile Include="Consumers.fsi" />

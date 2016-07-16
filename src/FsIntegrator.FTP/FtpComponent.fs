@@ -10,10 +10,8 @@ open System.Net.FtpClient
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 open NLog
 open FsIntegrator.Core
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.General
-open FsIntegrator.Core.MessageOperations
-open FsIntegrator.RemoteFileSystem
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 

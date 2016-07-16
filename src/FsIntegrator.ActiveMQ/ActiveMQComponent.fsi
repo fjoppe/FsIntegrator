@@ -1,10 +1,8 @@
 ﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.Core
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.General
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 
 exception ActiveMQComponentException of string
 

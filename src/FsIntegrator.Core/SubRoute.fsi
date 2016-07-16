@@ -1,8 +1,8 @@
 ﻿namespace FsIntegrator
 
-open FsIntegrator.Core
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 
 exception SubRouteException of string
 

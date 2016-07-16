@@ -72,6 +72,7 @@
     <Compile Include="FileSystemMonad.fs" />
     <Compile Include="FileComponent.fsi" />
     <Compile Include="FileComponent.fs" />
+    <Compile Include="Core.fs" />
     <Compile Include="Producers.fsi" />
     <Compile Include="Producers.fs" />
     <Compile Include="Consumers.fsi" />

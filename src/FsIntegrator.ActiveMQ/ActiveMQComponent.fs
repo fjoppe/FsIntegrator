@@ -7,9 +7,8 @@ open Apache.NMS.Util
 open Apache.NMS.ActiveMQ.Commands
 open NLog
 open FsIntegrator.Core
-open FsIntegrator.Core.General
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 exception ActiveMQComponentException of string
@@ -109,7 +108,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
     let logger = LogManager.GetLogger(this.GetType().FullName); 
 
-    let getDestination (message: Message option) =
+    let getDestination (message: FsIntegrator.Message option) =
         match props.Destination with
         |   Fixed str   -> str
         |   Evaluate strmacro ->
@@ -305,7 +304,7 @@ type ActiveMQ(props : Properties, initialState : State) as this =
 
     //  ===============================================  Consumer  ===============================================
     interface IConsumer
-    member private this.Consume (session:ISession) (message:FsIntegrator.Core.General.Message) =        
+    member private this.Consume (session:ISession) (message:FsIntegrator.Message) =        
         try
             let destinationName = getDestination (Some message)
             let destination = SessionUtil.GetDestination(session, destinationName, convertToActiveMQ props.DestinationType)

@@ -2,8 +2,6 @@
 
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.Core.General
-open FsIntegrator.RemoteFileSystem
 open System.IO
 
 module FtpProducerDefaults =

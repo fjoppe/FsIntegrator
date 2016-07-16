@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open FSharp.Core
-open FsIntegrator.Core.General
+
 
 [<Sealed>]
 type FSScript
@@ -13,6 +13,8 @@ type FSScript
 
 type FSBuilder =
     class
+        internal new : unit -> FSBuilder
+
         member Yield : 'a -> FSScript
 
         /// Move file to target
@@ -44,8 +46,3 @@ type FSBuilder =
         member MoveDir : fs : FSScript * source : string * target : string -> FSScript
     end
 
-module FileSystem =  
-    val fs : FSBuilder
-
-    /// Empty File Script (do nothing)
-    val NoFileScript<'a> : 'a -> FSScript

@@ -7,12 +7,9 @@ open System.Timers
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 open FSharpx.Control
 open NLog
-open FsIntegrator.Core
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.General
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
-open FsIntegrator.FileSystem
 
 exception FileComponentException of string
 

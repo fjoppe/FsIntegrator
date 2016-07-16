@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.Core
+﻿namespace FsIntegrator
 
 open System.IO
 open System.Xml.XPath

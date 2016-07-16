@@ -4,10 +4,7 @@ open System.IO
 open System.Xml.XPath
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.Core.General
-open FsIntegrator.Core.MessageOperations
-open FsIntegrator.FileSystem
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.MessageOperations
 
 
 module FileConsumerDefaults =
@@ -27,11 +24,11 @@ module ConsumersInternal =
         |> Map.ofSeq
 
 
-    let CallWithMapping mapper f (msg:General.Message) =
+    let CallWithMapping mapper f (msg:FsIntegrator.Message) =
         let mapping = substituteAllXPath mapper msg.Body
         f mapping msg
 
-    let CallWithMacroMapping (mapper:Map<'a, StringMacro>) f (msg:General.Message) =
+    let CallWithMacroMapping (mapper:Map<'a, StringMacro>) f (msg:FsIntegrator.Message) =
         let mapping = 
             mapper
             |> Map.toSeq

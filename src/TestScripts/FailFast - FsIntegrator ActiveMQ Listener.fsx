@@ -22,11 +22,9 @@ open System
 open System.IO
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.Core.Definitions
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
-open FsIntegrator.Core.General
-open FsIntegrator.Core.RouteEngine
+open FsIntegrator.RouteEngine
 
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log

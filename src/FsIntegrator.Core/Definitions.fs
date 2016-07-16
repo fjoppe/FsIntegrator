@@ -1,10 +1,9 @@
-﻿namespace FsIntegrator.Core
+﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.Core
-open FsIntegrator.Core.General
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 
 
 type DefinitionType =

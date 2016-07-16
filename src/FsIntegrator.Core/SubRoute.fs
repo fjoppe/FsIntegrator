@@ -3,10 +3,9 @@
 open System
 open System.Threading
 open NLog
-open FsIntegrator.Core
-open FsIntegrator.Core.General
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 exception SubRouteException of string

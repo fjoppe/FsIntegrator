@@ -3,9 +3,8 @@
 open System
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 open FsIntegrator.Core
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.General
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 
 exception FtpComponentException of string
 

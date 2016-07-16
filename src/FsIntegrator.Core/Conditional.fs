@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
-open FsIntegrator.Core
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator
+open FsIntegrator.MessageOperations
 
 #nowarn "0064"
 module Conditionals =

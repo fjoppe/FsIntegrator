@@ -3,7 +3,7 @@
 open System.IO
 open System.Net.FtpClient
 open FSharp.Core
-open FsIntegrator.Core.General
+
 
 type FtpCommand =
     |   Move      of string * string
@@ -73,8 +73,3 @@ type FtpBuilder() =
     member this.GetFile((fs:FtpScript), source, target) =
         fs.Add(GetFile(source, target))
 
-module RemoteFileSystem =  
-    let ftp = FtpBuilder()
-
-    /// Empty FTP Script (do nothing)
-    let NoFTPScript = fun _ -> FtpScript.Empty

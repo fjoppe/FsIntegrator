@@ -3,7 +3,6 @@
 open System.IO
 open FSharp.Core
 open FSharp.Quotations
-open FsIntegrator.Core.General
 
 
 type FSCommand =
@@ -59,10 +58,4 @@ type FSBuilder() =
 
     member this.MoveDir((fs:FSScript), source, target) =
         fs.Add(MoveDir(source, target))
-
-module FileSystem =  
-    let fs = FSBuilder()
-
-    /// Empty File Script (do nothing)
-    let NoFileScript = fun _ -> FSScript.Empty
 

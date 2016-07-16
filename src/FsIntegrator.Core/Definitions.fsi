@@ -1,12 +1,11 @@
-﻿namespace FsIntegrator.Core
+﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.Core.General
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.MessageOperations
+open FsIntegrator.RouteEngine
+open FsIntegrator.MessageOperations
 
 type DefinitionType =
-    | ProcessStep of (General.Message -> General.Message)
+    | ProcessStep of (FsIntegrator.Message -> FsIntegrator.Message)
     | Consume     of IConsumer * (Message -> Message)
     | Choose      of ConditionalRoute list
     | ErrorHandlers of ErrorHandlerRoute list

@@ -1,9 +1,9 @@
-﻿namespace FsIntegrator.Core
+﻿namespace FsIntegrator.RouteEngine
 
 open System
 open NLog
-open FsIntegrator.Core.EngineParts
-open FsIntegrator.Core.General 
+open FsIntegrator
+
 
 [<AutoOpen>]
 module RouteEngine =
