@@ -36,11 +36,8 @@ open FsIntegrator.Conditionals
 open FsIntegrator.Queing
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
-let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
-let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs", (sprintf "%s.log" __SOURCE_FILE__)))
-let xmlConfig = new NLog.Config.XmlLoggingConfiguration(nlogPath)
-xmlConfig.Variables.Item("logpath") <- Layouts.SimpleLayout(logfile)
-LogManager.Configuration <- xmlConfig
+#load "nlog.fsx"
+NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__
 
 let logger = LogManager.GetLogger(__SOURCE_FILE__)
 

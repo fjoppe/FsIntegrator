@@ -44,6 +44,7 @@ type FtpMessageHeader = {
 module Internal =
     let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
+type TransferMode = Active | Passive
 
 type FtpOption =
     |   Interval of float<s>
@@ -51,7 +52,7 @@ type FtpOption =
     |   AfterSuccess of (Message -> FtpScript)
     |   AfterError   of (Message -> FtpScript)
     |   ConcurrentTasks of int
-
+    |  TransferMode of TransferMode
 
 type Options = {
         Interval        : float<s>
@@ -59,6 +60,7 @@ type Options = {
         AfterSuccess    : (Message -> FtpScript)
         AfterError      : (Message -> FtpScript)
         ConcurrentTasks : int
+        TransferMode    : TransferMode
     }
 
 type PathType =
@@ -80,6 +82,7 @@ type Properties = {
             AfterSuccess = fun _ -> FtpScript.Empty
             AfterError = fun _ -> FtpScript.Empty
             ConcurrentTasks = 0
+            TransferMode = TransferMode.Active
         }
         options 
         |> List.fold (fun state option ->
@@ -93,6 +96,7 @@ type Properties = {
                     {state with ConcurrentTasks = amount}
                 else
                     raise <| FtpComponentException "ERROR: ConcurrentTasks must be larger than 0"
+            |   TransferMode(mode)  -> {state with TransferMode = mode}
         ) defaultOptions
 
     static member Create path connection options = 
@@ -161,6 +165,10 @@ type Ftp(props : Properties, initialState : State) as this =
         |  Some(creds) -> 
             logger.Trace("Applying FTP Credentials")
             client.Credentials <- new NetworkCredential(creds.Username, creds.Password)
+        client.DataConnectionType <- 
+            match props.Options.TransferMode with
+            | TransferMode.Active -> FtpDataConnectionType.AutoActive
+            | TransferMode.Passive -> FtpDataConnectionType.AutoPassive
         client
 
     /// Change the running state of this instance

@@ -20,11 +20,9 @@
 #r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"   // the order of #r to dll's is important, this one comes first
 #r @"FsIntegrator.FTP/bin/Debug/FsIntegrator.FTP.dll"
 #r @"FsIntegrator.ActiveMQ/bin/Debug/FsIntegrator.ActiveMQ.dll"
-#r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
-open NLog
 open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
@@ -35,16 +33,13 @@ open FsIntegrator.Queing
 open FsIntegrator.Core.Definitions
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
-let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
-let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs", (sprintf "%s.log" __SOURCE_FILE__)))
-let xmlConfig = new NLog.Config.XmlLoggingConfiguration(nlogPath)
-xmlConfig.Variables.Item("logpath") <- Layouts.SimpleLayout(logfile)
-LogManager.Configuration <- xmlConfig
+#load "nlog.fsx"
+NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__
 
 
 //  Try this at home with your own configuration, for example: VirtualBox with Linux and ActiveMQ under ServiceMix
-let amqConnection = "tcp://TestRemoteVM:61616"         // hostname of the ActiveMQ server
-let amqCredentials = Credentials.Create "smx" "smx"    // credentials (ServiceMix)
+let amqConnection = "tcp://TestRemoteVM:61616"              // hostname of the ActiveMQ server
+let amqCredentials = Credentials.Create "admin" "admin"     // credentials (ServiceMix)
 
 //  Try this at home with your own configuration, for example: VirtualBox with Linux and vsftpd
 let ftpConnection = "TestRemoteVM/inbox"                     // hostname of the ftp server
@@ -78,22 +73,16 @@ let Route2 =
 let Route3 = 
     From.ActiveMQ("testQueue", [AMQOption.Connection(amqConnection); AMQOption.Credentials(amqCredentials)])
     =>= To.SubRoute "subroute"
-    =>= To.Ftp(ftpStorePath, ftpConnection, [FtpOption.Credentials(ftpCredentials)])
+    =>= To.Ftp(ftpStorePath, ftpConnection, [FtpOption.Credentials(ftpCredentials); FtpOption.TransferMode(TransferMode.Active)])
 
 
-let id1 = Route1.Id
-let id2 = Route2.Id
-let id3 = Route3.Id
+let routes = [Route1; Route2; Route3]
 
-RegisterRoute Route1
-RegisterRoute Route2
-RegisterRoute Route3
+routes |> List.iter(RegisterRoute)
 
 
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
-StartRoute id1
-StartRoute id2
-StartRoute id3
+routes |> List.iter(fun r -> StartRoute r.Id)
 RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 
 //  At this point, any xml file in ./src/TestExamples/TestFullRoute/ will be processed (see prereqs)
@@ -103,8 +92,8 @@ RouteInfo() |> List.iter(fun e -> printfn "%A\t%A" e.Id e.RunningState)
 
 printfn "***************************"
 
-StopRoute id3   //  closes activemq listener
-StartRoute id3  //  reactivates activemq listener
+StopRoute Route3.Id     //  closes activemq listener
+StartRoute Route3.Id    //  reactivates activemq listener
 
 printfn "***************************"
 

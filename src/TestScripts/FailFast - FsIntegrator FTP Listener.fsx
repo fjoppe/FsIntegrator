@@ -17,11 +17,11 @@
 #I "../../packages" 
 #r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"   // the order of #r to dll's is important
 #r @"FsIntegrator.FTP/bin/Debug/FsIntegrator.FTP.dll"
-#r @"NLog/lib/net45/NLog.dll"
+//#r @"NLog/lib/net45/NLog.dll"
 
 open System
 open System.IO
-open NLog
+//open NLog
 open FsIntegrator.Core
 open FsIntegrator.Core.Definitions
 open FsIntegrator.Producers
@@ -31,11 +31,8 @@ open FsIntegrator.Core.RouteEngine
 open FsIntegrator.FileTransfer
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
-let nlogPath = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "./nlog.config"))
-let logfile = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "logs", (sprintf "%s.log" __SOURCE_FILE__)))
-let xmlConfig = new NLog.Config.XmlLoggingConfiguration(nlogPath)
-xmlConfig.Variables.Item("logpath") <- Layouts.SimpleLayout(logfile)
-LogManager.Configuration <- xmlConfig
+#load "nlog.fsx"
+NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__
 
 
 //  Try this at home with your own configuration, for example: VirtualBox with Linux and vsftpd
@@ -50,7 +47,7 @@ let Process1 = To.Process(fun (m:Message) -> printfn "message received: %A" m.Bo
 let Process2 = To.Process(maps, fun mp m -> printfn "processing: %s" mp.["hi-message"])
 
 let route = 
-    From.Ftp(fileListenerPath, connection, [FtpOption.Credentials(credentials)])
+    From.Ftp(fileListenerPath, connection, [FtpOption.Credentials(credentials); FtpOption.TransferMode(TransferMode.Passive)])
     =>= Process1
     =>= Process2
 

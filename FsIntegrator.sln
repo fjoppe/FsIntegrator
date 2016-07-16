@@ -33,6 +33,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts", "{36B68559-7787-4409-B6F6-2744253B20FC}"
 	ProjectSection(SolutionItems) = preProject
+		src\TestScripts\Demo Script.fsx = src\TestScripts\Demo Script.fsx
 		src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx = src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx
 		src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx
 		src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx = src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx
@@ -42,6 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts"
 		src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx = src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx
 		src\TestScripts\FailFast - FTP Client Exploration.fsx = src\TestScripts\FailFast - FTP Client Exploration.fsx
 		src\TestScripts\nlog.config = src\TestScripts\nlog.config
+		src\TestScripts\nlog.fsx = src\TestScripts\nlog.fsx
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsIntegrator.Core", "src\FsIntegrator.Core\FsIntegrator.Core.fsproj", "{F9DE463D-B623-46C8-B6E4-0BC5370C1B59}"

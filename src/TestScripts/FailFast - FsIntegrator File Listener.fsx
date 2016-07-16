@@ -11,6 +11,10 @@
 #I ".." 
 #r @"FsIntegrator.Core/bin/Debug/FsIntegrator.Core.dll"
 
+//  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
+#load "nlog.fsx"
+NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__
+
 open System.IO
 open FsIntegrator.Core
 open FsIntegrator.Producers

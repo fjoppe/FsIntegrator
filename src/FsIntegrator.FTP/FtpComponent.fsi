@@ -29,6 +29,7 @@ type FtpMessageHeader = {
         FileInfo : RemoteFile
     }
 
+type TransferMode = Active | Passive
 
 type FtpOption =
     /// Specifies the polling interval
@@ -41,6 +42,8 @@ type FtpOption =
     |   AfterError   of (Message -> FtpScript)
     /// The amount of concurrent tasks which process in parallel
     |  ConcurrentTasks of int
+    /// The transfer mode
+    |  TransferMode of TransferMode
 
 type Ftp = 
     class

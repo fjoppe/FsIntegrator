@@ -10,7 +10,9 @@ module FtpConsumerDefaults =
 
     let afterErrorDefault  = fun _ -> FtpScript.Empty
 
-    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault)]
+    let transferMode = FtpOption.TransferMode(TransferMode.Active)
+
+    let defaultConsumerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault); transferMode]
 
 
 module Consumers =

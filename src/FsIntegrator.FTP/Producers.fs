@@ -37,7 +37,9 @@ module FtpProducerDefaults =
                     }
             |   None      -> failwith "No file headers found! If you see this error, then it is a framework issue."
 
-    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1)]
+    let transferMode = FtpOption.TransferMode(TransferMode.Active)
+
+    let defaultProducerOptions = [AfterSuccess(afterSuccessDefault); AfterError(afterErrorDefault);ConcurrentTasks(1);transferMode]
 
 
 module Producers =
