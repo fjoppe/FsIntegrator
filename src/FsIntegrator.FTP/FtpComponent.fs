@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.FileTransfer
+﻿namespace FsIntegrator
 
 open System
 open System.IO
@@ -13,7 +13,7 @@ open FsIntegrator.Core
 open FsIntegrator.Core.EngineParts
 open FsIntegrator.Core.General
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.FileTransfer.RemoteFileSystem
+open FsIntegrator.RemoteFileSystem
 open FsIntegrator.Utility
 
 
@@ -40,10 +40,6 @@ type FtpMessageHeader = {
         static member Create fileInfo =
             { FileInfo = fileInfo}
 
-
-module Internal =
-    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
-
 type TransferMode = Active | Passive
 
 type FtpOption =
@@ -54,82 +50,87 @@ type FtpOption =
     |   ConcurrentTasks of int
     |  TransferMode of TransferMode
 
-type Options = {
-        Interval        : float<s>
-        Credentials     : Credentials option
-        AfterSuccess    : (Message -> FtpScript)
-        AfterError      : (Message -> FtpScript)
-        ConcurrentTasks : int
-        TransferMode    : TransferMode
-    }
 
-type PathType =
-    |   Fixed       of string
-    |   Evaluate    of StringMacro
+module FtpInternal =
+    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
-
-type Properties = {
-        Id          : Guid
-        Path        : PathType
-        Connection  : string
-        Options     : Options
-    }
-    with
-    static member convertOptions options =
-        let defaultOptions = {
-            Interval = 10.0<s> 
-            Credentials = None
-            AfterSuccess = fun _ -> FtpScript.Empty
-            AfterError = fun _ -> FtpScript.Empty
-            ConcurrentTasks = 0
-            TransferMode = TransferMode.Active
+    type Options = {
+            Interval        : float<s>
+            Credentials     : Credentials option
+            AfterSuccess    : (Message -> FtpScript)
+            AfterError      : (Message -> FtpScript)
+            ConcurrentTasks : int
+            TransferMode    : TransferMode
         }
-        options 
-        |> List.fold (fun state option ->
-            match option with
-            |   Interval(i)         -> {state with Interval = i}
-            |   Credentials(c)      -> {state with Credentials = Some(c)}
-            |   AfterSuccess(func)  -> {state with AfterSuccess = func}
-            |   AfterError(func)    -> {state with AfterError = func}
-            |   ConcurrentTasks(amount)  -> 
-                if amount > 0 then
-                    {state with ConcurrentTasks = amount}
-                else
-                    raise <| FtpComponentException "ERROR: ConcurrentTasks must be larger than 0"
-            |   TransferMode(mode)  -> {state with TransferMode = mode}
-        ) defaultOptions
 
-    static member Create path connection options = 
-        let convertedOptions = Properties.convertOptions options
-        {Id = Guid.NewGuid(); Path = path; Connection = connection; Options = convertedOptions}
+    type PathType =
+        |   Fixed       of string
+        |   Evaluate    of StringMacro
 
 
-type State = {
-        ProducerHook    : ProducerMessageHook option
-        RunningState    : ProducerState
-        Cancellation    : CancellationTokenSource
-        FtpClient       : FtpClient
-        Timer           : Timer
-        EngineServices  : IEngineServices option
-        TaskPool        : RestrictedResourcePool
-    }
-    with
-    static member Create convertedOptions = 
-        let timer = new Timer(Internal.secsToMsFloat <| convertedOptions.Interval)
-        {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); FtpClient = new FtpClient(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
+    type Properties = {
+            Id          : Guid
+            Path        : PathType
+            Connection  : string
+            Options     : Options
+        }
+        with
+        static member convertOptions options =
+            let defaultOptions = {
+                Interval = 10.0<s> 
+                Credentials = None
+                AfterSuccess = fun _ -> FtpScript.Empty
+                AfterError = fun _ -> FtpScript.Empty
+                ConcurrentTasks = 0
+                TransferMode = TransferMode.Active
+            }
+            options 
+            |> List.fold (fun state option ->
+                match option with
+                |   Interval(i)         -> {state with Interval = i}
+                |   Credentials(c)      -> {state with Credentials = Some(c)}
+                |   AfterSuccess(func)  -> {state with AfterSuccess = func}
+                |   AfterError(func)    -> {state with AfterError = func}
+                |   ConcurrentTasks(amount)  -> 
+                    if amount > 0 then
+                        {state with ConcurrentTasks = amount}
+                    else
+                        raise <| FtpComponentException "ERROR: ConcurrentTasks must be larger than 0"
+                |   TransferMode(mode)  -> {state with TransferMode = mode}
+            ) defaultOptions
+
+        static member Create path connection options = 
+            let convertedOptions = Properties.convertOptions options
+            {Id = Guid.NewGuid(); Path = path; Connection = connection; Options = convertedOptions}
 
 
-    member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
-    member this.SetEngineServices services = {this with EngineServices = services}
+    type State = {
+            ProducerHook    : ProducerMessageHook option
+            RunningState    : ProducerState
+            Cancellation    : CancellationTokenSource
+            FtpClient       : FtpClient
+            Timer           : Timer
+            EngineServices  : IEngineServices option
+            TaskPool        : RestrictedResourcePool
+        }
+        with
+        static member Create convertedOptions = 
+            let timer = new Timer(secsToMsFloat <| convertedOptions.Interval)
+            {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); FtpClient = new FtpClient(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
 
-type Operation =
-    |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
-    |   SetEngineServices of IEngineServices   * ActionAsyncResponse
-    |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
-    |   GetRunningState of FunctionsAsyncResponse<ProducerState>
-    |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
+
+        member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
+        member this.SetEngineServices services = {this with EngineServices = services}
+
+    type Operation =
+        |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
+        |   SetEngineServices of IEngineServices   * ActionAsyncResponse
+        |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
+        |   GetRunningState of FunctionsAsyncResponse<ProducerState>
+        |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
 
 
+open FtpInternal
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type Ftp(props : Properties, initialState : State) as this = 
     

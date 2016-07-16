@@ -2,13 +2,12 @@
 
 open System.IO
 open System.Xml.XPath
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Core.General
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.FileHandling
-open FsIntegrator.FileHandling.FileSystem
+open FsIntegrator.FileSystem
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.SubRoute
 
 
 module FileConsumerDefaults =

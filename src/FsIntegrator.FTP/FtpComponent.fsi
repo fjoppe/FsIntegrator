@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.FileTransfer
+﻿namespace FsIntegrator
 
 open System
 open FSharp.Data.UnitSystems.SI.UnitSymbols

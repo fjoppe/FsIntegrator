@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.SubRoute
+﻿namespace FsIntegrator
 
 open FsIntegrator.Core
 open FsIntegrator.Core.EngineParts

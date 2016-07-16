@@ -11,13 +11,13 @@
 
 
 open System
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
 open FsIntegrator.Core.General
 open FsIntegrator.Core.RouteEngine
-open FsIntegrator.FileHandling
-open FsIntegrator.FileHandling.FileSystem
+open FsIntegrator.FileSystem
 
 
 let fileCommands = fs {

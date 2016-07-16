@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.FileHandling
+﻿namespace FsIntegrator
 
 open FSharp.Core
 open FsIntegrator.Core.General

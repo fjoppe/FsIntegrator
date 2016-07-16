@@ -1,10 +1,10 @@
 ﻿namespace FsIntegrator
 
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Core.General
-open FsIntegrator.FileHandling
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.SubRoute
+
 
 // Contains the Core consumers, reference "FsIntegrator.Core.dll" to use it.
 module Consumers =

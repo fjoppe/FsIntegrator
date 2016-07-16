@@ -2,7 +2,6 @@
 
 open FsIntegrator.Core
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.Queing
 
 module ActiveMQConsumerDefaults =
     let defaultConsumerOptions = []

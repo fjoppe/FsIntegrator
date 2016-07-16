@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.FileHandling
+﻿namespace FsIntegrator
 
 open System.IO
 open System.Timers

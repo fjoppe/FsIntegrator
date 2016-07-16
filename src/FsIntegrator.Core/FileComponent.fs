@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.FileHandling
+﻿namespace FsIntegrator
 
 open System
 open System.IO
@@ -12,7 +12,7 @@ open FsIntegrator.Core.EngineParts
 open FsIntegrator.Core.General
 open FsIntegrator.Core.MessageOperations
 open FsIntegrator.Utility
-open FsIntegrator.FileHandling.FileSystem
+open FsIntegrator.FileSystem
 
 exception FileComponentException of string
 
@@ -23,11 +23,6 @@ type FileMessageHeader = {
         static member Create fileInfo =
             { FileInfo = fileInfo}
 
-
-module Internal =
-    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
-
-
 type FileOption =
      |  Interval of float<s>
      |  CreatePathIfNotExists of bool
@@ -36,84 +31,86 @@ type FileOption =
      |  ConcurrentTasks of int
 
 
-type Options = {
-     Interval           : float<s>
-     CreateIfNotExists  : bool
-     AfterSuccess       : (Message -> FSScript)
-     AfterError         : (Message -> FSScript)
-     ConcurrentTasks    : int
-    }
+module FileInternal =
+    let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
-
-type PathType =
-    |   Fixed       of string
-    |   Evaluate    of StringMacro
-
-/// Contains "File" configuration
-type Properties = {
-        Id           : Guid
-        Path         : PathType
-        Options      : Options
-    }
-    with
-    /// Converts a list of FileOption into an Option record. Each given option overrides a default, so the defaults are coded here.
-    static member convertOptions options =
-        let subDir source sub =
-            let filename = Path.GetFileName(source)
-            let folder = Path.Combine(Path.GetDirectoryName(source), sub) 
-            (source, folder, Path.Combine(folder, filename))
-            
-        let defaultOptions = {
-            Interval = 10.0<s>; 
-            CreateIfNotExists = false
-            AfterSuccess = fun _ -> FSScript.Empty
-            AfterError = fun _ -> FSScript.Empty
-            ConcurrentTasks = 0
+    type FileOptions = {
+         Interval           : float<s>
+         CreateIfNotExists  : bool
+         AfterSuccess       : (Message -> FSScript)
+         AfterError         : (Message -> FSScript)
+         ConcurrentTasks    : int
         }
-        options 
-        |> List.fold (fun state option ->
-            match option with
-            |   Interval(i)              -> {state with Interval = i}
-            |   CreatePathIfNotExists(b) -> {state with CreateIfNotExists = b}
-            |   AfterSuccess(func)       -> {state with AfterSuccess = func}
-            |   AfterError(func)         -> {state with AfterError = func}
-            |   ConcurrentTasks(amount)  -> 
-                if amount > 0 then
-                    {state with ConcurrentTasks = amount}
-                else
-                    raise <| FileComponentException "ERROR: ConcurrentTasks must be larger than 0"
-        ) defaultOptions
 
-    static member Create path options = 
-        let convertedOptions = Properties.convertOptions options
-        {Id = Guid.NewGuid(); Path = path ; Options = convertedOptions}
+    type PathType =
+        |   Fixed       of string
+        |   Evaluate    of StringMacro
+
+    /// Contains "File" configuration
+    type Properties = {
+            Id           : Guid
+            Path         : PathType
+            Options      : FileOptions
+        }
+        with
+        /// Converts a list of FileOption into an Option record. Each given option overrides a default, so the defaults are coded here.
+        static member convertOptions options =
+            let subDir source sub =
+                let filename = Path.GetFileName(source)
+                let folder = Path.Combine(Path.GetDirectoryName(source), sub) 
+                (source, folder, Path.Combine(folder, filename))
+            
+            let defaultOptions = {
+                Interval = 10.0<s>; 
+                CreateIfNotExists = false
+                AfterSuccess = fun _ -> FSScript.Empty
+                AfterError = fun _ -> FSScript.Empty
+                ConcurrentTasks = 0
+            }
+            options 
+            |> List.fold (fun state option ->
+                match option with
+                |   Interval(i)              -> {state with Interval = i}
+                |   CreatePathIfNotExists(b) -> {state with CreateIfNotExists = b}
+                |   AfterSuccess(func)       -> {state with AfterSuccess = func}
+                |   AfterError(func)         -> {state with AfterError = func}
+                |   ConcurrentTasks(amount)  -> 
+                    if amount > 0 then
+                        {state with ConcurrentTasks = amount}
+                    else
+                        raise <| FileComponentException "ERROR: ConcurrentTasks must be larger than 0"
+            ) defaultOptions
+
+        static member Create path options = 
+            let convertedOptions = Properties.convertOptions options
+            {Id = Guid.NewGuid(); Path = path ; Options = convertedOptions}
+
+    /// Contains "File" state
+    type State = {
+            ProducerHook    : ProducerMessageHook option
+            Timer           : Timer
+            RunningState    : ProducerState
+            Cancellation    : CancellationTokenSource
+            EngineServices  : IEngineServices option
+            TaskPool        : RestrictedResourcePool
+        }
+        with
+        static member Create convertedOptions = 
+            let timer = new Timer(secsToMsFloat <| convertedOptions.Interval)
+            {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
+
+        member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
+        member this.SetEngineServices services = {this with EngineServices = services}
 
 
-/// Contains "File" state
-type State = {
-        ProducerHook    : ProducerMessageHook option
-        Timer           : Timer
-        RunningState    : ProducerState
-        Cancellation    : CancellationTokenSource
-        EngineServices  : IEngineServices option
-        TaskPool        : RestrictedResourcePool
-    }
-    with
-    static member Create convertedOptions = 
-        let timer = new Timer(Internal.secsToMsFloat <| convertedOptions.Interval)
-        {ProducerHook = None; Timer = timer; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
+    type Operation =
+        |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
+        |   SetEngineServices of IEngineServices   * ActionAsyncResponse
+        |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
+        |   GetRunningState of FunctionsAsyncResponse<ProducerState>
+        |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
 
-    member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
-    member this.SetEngineServices services = {this with EngineServices = services}
-
-
-type Operation =
-    |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
-    |   SetEngineServices of IEngineServices   * ActionAsyncResponse
-    |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
-    |   GetRunningState of FunctionsAsyncResponse<ProducerState>
-    |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
-
+open FileInternal
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type File(props : Properties, initialState: State) as this = 
 

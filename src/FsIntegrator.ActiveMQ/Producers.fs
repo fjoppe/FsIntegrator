@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.Queing
+
 
 module ActiveMQProducerDefaults =
     let connection = Connection("activemq:tcp://localhost:61616")

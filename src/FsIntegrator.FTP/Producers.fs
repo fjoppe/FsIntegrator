@@ -1,9 +1,9 @@
 ﻿namespace FsIntegrator
 
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Core.General
-open FsIntegrator.FileTransfer
-open FsIntegrator.FileTransfer.RemoteFileSystem
+open FsIntegrator.RemoteFileSystem
 open System.IO
 
 module FtpProducerDefaults =

@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.Queing
+﻿namespace FsIntegrator
 
 open System
 open FsIntegrator.Core

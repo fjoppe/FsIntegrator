@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.Queing
+﻿namespace FsIntegrator
 
 open System
 open System.Threading
@@ -34,74 +34,76 @@ type AMQOption =
     |   ConcurrentTasks of int
     |   RedeliveryPolicy of RedeliveryPolicy
 
-type DestinationNameType =
-    |   Fixed       of string
-    |   Evaluate    of StringMacro
+module ActiveMQInternal=
 
-type Properties = {
-        Id               : Guid
-        Destination      : DestinationNameType
-        Connection       : Uri
-        Credentials      : Credentials option
-        DestinationType  : DestinationType
-        ConcurrentTasks  : int
-        RedeliveryPolicy : RedeliveryPolicy
-    }
-    with
-    static member convertOptions options =
-        let defaultOptions = {
-            Id = Guid.NewGuid()
-            Destination = Fixed(String.Empty)
-            DestinationType = DestinationType.Queue
-            Connection = new Uri("urn:invalid")
-            Credentials = None
-            ConcurrentTasks = -1
-            RedeliveryPolicy = RedeliveryPolicy.Empty
+    type DestinationNameType =
+        |   Fixed       of string
+        |   Evaluate    of StringMacro
+
+    type Properties = {
+            Id               : Guid
+            Destination      : DestinationNameType
+            Connection       : Uri
+            Credentials      : Credentials option
+            DestinationType  : DestinationType
+            ConcurrentTasks  : int
+            RedeliveryPolicy : RedeliveryPolicy
         }
-        options 
-        |> List.fold (fun state option ->
-            match option with
-            |   Connection(c)       -> {state with Connection = new Uri(c)}
-            |   Credentials(c)      -> {state with Credentials = Some(c)}
-            |   DestinationType(d)  -> {state with DestinationType = d}
-            |   ConcurrentTasks(amount)  -> 
-                if amount > 0 then
-                    {state with ConcurrentTasks = amount}
-                else
-                    raise <| ActiveMQComponentException "ERROR: ConcurrentTasks must be larger than 0"
-            |   RedeliveryPolicy(rp) -> {state with RedeliveryPolicy = rp}
-        ) defaultOptions
+        with
+        static member convertOptions options =
+            let defaultOptions = {
+                Id = Guid.NewGuid()
+                Destination = Fixed(String.Empty)
+                DestinationType = DestinationType.Queue
+                Connection = new Uri("urn:invalid")
+                Credentials = None
+                ConcurrentTasks = -1
+                RedeliveryPolicy = RedeliveryPolicy.Empty
+            }
+            options 
+            |> List.fold (fun state option ->
+                match option with
+                |   Connection(c)       -> {state with Connection = new Uri(c)}
+                |   Credentials(c)      -> {state with Credentials = Some(c)}
+                |   DestinationType(d)  -> {state with DestinationType = d}
+                |   ConcurrentTasks(amount)  -> 
+                    if amount > 0 then
+                        {state with ConcurrentTasks = amount}
+                    else
+                        raise <| ActiveMQComponentException "ERROR: ConcurrentTasks must be larger than 0"
+                |   RedeliveryPolicy(rp) -> {state with RedeliveryPolicy = rp}
+            ) defaultOptions
 
-    static member Create destination options = 
-        let convertedOptions = Properties.convertOptions options
-        {convertedOptions with Destination = destination }    
-
-
-type State = {
-        ProducerHook    : ProducerMessageHook option
-        RunningState    : ProducerState
-        Cancellation    : CancellationTokenSource
-        EngineServices  : IEngineServices option
-        Connection      : IConnection option
-        Session         : ISession option
-        TaskPool        : RestrictedResourcePool
-    }
-    with
-    static member Create convertedOptions = 
-        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Connection = None; Session = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
-
-    member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
-    member this.SetEngineServices services = {this with EngineServices = services}
+        static member Create destination options = 
+            let convertedOptions = Properties.convertOptions options
+            {convertedOptions with Destination = destination }    
 
 
-type Operation =
-    |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
-    |   SetEngineServices of IEngineServices   * ActionAsyncResponse
-    |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
-    |   GetRunningState of FunctionsAsyncResponse<ProducerState>
-    |   GetSession of FunctionsAsyncResponse<ISession>
+    type State = {
+            ProducerHook    : ProducerMessageHook option
+            RunningState    : ProducerState
+            Cancellation    : CancellationTokenSource
+            EngineServices  : IEngineServices option
+            Connection      : IConnection option
+            Session         : ISession option
+            TaskPool        : RestrictedResourcePool
+        }
+        with
+        static member Create convertedOptions = 
+            {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Connection = None; Session = None; TaskPool = RestrictedResourcePool.Create <| convertedOptions.ConcurrentTasks}
+
+        member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
+        member this.SetEngineServices services = {this with EngineServices = services}
 
 
+    type Operation =
+        |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
+        |   SetEngineServices of IEngineServices   * ActionAsyncResponse
+        |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
+        |   GetRunningState of FunctionsAsyncResponse<ProducerState>
+        |   GetSession of FunctionsAsyncResponse<ISession>
+
+open ActiveMQInternal
 #nowarn "0050"  // warning that implementation of "RouteEngine.IProducer'" is invisible because absent in signature. But that's exactly what we want.
 type ActiveMQ(props : Properties, initialState : State) as this = 
 

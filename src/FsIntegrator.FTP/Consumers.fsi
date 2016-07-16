@@ -1,9 +1,9 @@
 ﻿namespace FsIntegrator
 
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Core.General
 open FsIntegrator.Core.MessageOperations
-open FsIntegrator.FileTransfer
 
 /// Contains the FTP Consumer, reference "FsIntegrator.FTP.dll" to use it.
 module Consumers=

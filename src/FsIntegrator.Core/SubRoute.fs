@@ -1,4 +1,4 @@
-﻿namespace FsIntegrator.SubRoute
+﻿namespace FsIntegrator
 
 open System
 open System.Threading
@@ -15,62 +15,66 @@ exception SubRouteException of string
 type SubRouteOption =
      |  FailForMissingActiveSubRoute of bool
 
-type Options = {
-     FailForMissingActiveSubRoute : bool
-}
 
-type PathType =
-    |   Fixed       of string
-    |   Evaluate    of StringMacro
+module SubRouteInternal =
 
-/// Contains "SubRoute" configuration
-type Properties = {
-        Id           : Guid
-        Name         : PathType
-        Options      : Options
+    type Options = {
+         FailForMissingActiveSubRoute : bool
     }
-    with
-    static member convertOptions options =
-        let defaultOptions = {
-            FailForMissingActiveSubRoute = false;
-            }
-        options 
-        |> List.fold (fun state option ->
-            match option with
-            |   FailForMissingActiveSubRoute b -> {state with FailForMissingActiveSubRoute = b}
-        ) defaultOptions
 
-    static member Create path options = 
-        let convertedOptions = Properties.convertOptions options
-        {Id = Guid.NewGuid(); Name = path; Options = convertedOptions}
+    type PathType =
+        |   Fixed       of string
+        |   Evaluate    of StringMacro
+
+    /// Contains "SubRoute" configuration
+    type Properties = {
+            Id           : Guid
+            Name         : PathType
+            Options      : Options
+        }
+        with
+        static member convertOptions options =
+            let defaultOptions = {
+                FailForMissingActiveSubRoute = false;
+                }
+            options 
+            |> List.fold (fun state option ->
+                match option with
+                |   FailForMissingActiveSubRoute b -> {state with FailForMissingActiveSubRoute = b}
+            ) defaultOptions
+
+        static member Create path options = 
+            let convertedOptions = Properties.convertOptions options
+            {Id = Guid.NewGuid(); Name = path; Options = convertedOptions}
+
+    type SubRouteMessage = Message * FunctionsAsyncResponse<Message>
+
+    /// Contains "SubRoute" state
+    type State = {
+            ProducerHook    : ProducerMessageHook option
+            RunningState    : ProducerState
+            Cancellation    : CancellationTokenSource
+            EngineServices  : IEngineServices option
+            Driver          : Agent<SubRouteMessage> option
+        }
+        with
+        static member Create convertedOptions = 
+            {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Driver = None}
+
+        member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
+        member this.SetEngineServices services = {this with EngineServices = services}
 
 
-type SubRouteMessage = Message * FunctionsAsyncResponse<Message>
-
-/// Contains "SubRoute" state
-type State = {
-        ProducerHook    : ProducerMessageHook option
-        RunningState    : ProducerState
-        Cancellation    : CancellationTokenSource
-        EngineServices  : IEngineServices option
-        Driver          : Agent<SubRouteMessage> option
-    }
-    with
-    static member Create convertedOptions = 
-        {ProducerHook = None; RunningState = Stopped; Cancellation = new CancellationTokenSource(); EngineServices = None; Driver = None}
-
-    member this.SetProducerHook hook = {this with ProducerHook = Some(hook)}
-    member this.SetEngineServices services = {this with EngineServices = services}
+    type Operation =
+        |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
+        |   SetEngineServices of IEngineServices   * ActionAsyncResponse
+        |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
+        |   GetRunningState of FunctionsAsyncResponse<ProducerState>
+        |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
+        |   GetDriver of FunctionsAsyncResponse<Agent<SubRouteMessage>>
 
 
-type Operation =
-    |   SetProducerHook of ProducerMessageHook * ActionAsyncResponse
-    |   SetEngineServices of IEngineServices   * ActionAsyncResponse
-    |   ChangeRunningState of ProducerState  * (State -> State)  * ActionAsyncResponse
-    |   GetRunningState of FunctionsAsyncResponse<ProducerState>
-    |   GetEngineServices of FunctionsAsyncResponse<IEngineServices>
-    |   GetDriver of FunctionsAsyncResponse<Agent<SubRouteMessage>>
-
+open SubRouteInternal
 #nowarn "0050"  // warning that implementation of some interfaces are invisible because absent in signature. But that's exactly what we want.
 type SubRoute(props : Properties, initialState: State) as this = 
 

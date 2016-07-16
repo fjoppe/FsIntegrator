@@ -1,7 +1,6 @@
 ﻿namespace FsIntegrator
 
-open FsIntegrator.FileHandling
-open FsIntegrator.SubRoute
+open FsIntegrator
 
 module Producers =
     type From = struct end

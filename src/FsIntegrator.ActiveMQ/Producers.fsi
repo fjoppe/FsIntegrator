@@ -1,7 +1,5 @@
 ﻿namespace FsIntegrator
 
-open FsIntegrator.Queing
-
 module Producers =
     type From = struct end
     type From with

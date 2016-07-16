@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open FsIntegrator.Core
-open FsIntegrator.Queing
+
 
 /// Contains the ActiveMQ consumer, reference "FsIntegrator.ActiveMQ.dll" to use it.
 module Consumers=

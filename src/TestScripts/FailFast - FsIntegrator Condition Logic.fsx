@@ -23,17 +23,17 @@
 open System
 open System.IO
 open NLog
+open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.Producers
 open FsIntegrator.Consumers
 open FsIntegrator.Core.General
 open FsIntegrator.Core.RouteEngine
-open FsIntegrator.FileHandling
-open FsIntegrator.FileHandling.FileSystem
+open FsIntegrator.FileSystem
 open FsIntegrator.Core.MessageOperations
 open FsIntegrator.Core.Definitions
 open FsIntegrator.Conditionals
-open FsIntegrator.Queing
+
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 #load "nlog.fsx"
