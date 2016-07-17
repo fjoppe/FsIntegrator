@@ -41,11 +41,12 @@ type FtpMessageHeader = {
 type TransferMode = Active | Passive
 
 type FtpOption =
-    |   Interval of float<s>
-    |   Credentials of Credentials
-    |   AfterSuccess of (Message -> FtpScript)
-    |   AfterError   of (Message -> FtpScript)
-    |   ConcurrentTasks of int
+    |  InitialDelay of float<s>
+    |  Interval of float<s>
+    |  Credentials of Credentials
+    |  AfterSuccess of (Message -> FtpScript)
+    |  AfterError   of (Message -> FtpScript)
+    |  ConcurrentTasks of int
     |  TransferMode of TransferMode
     |  EndpointFailureStrategy of EndpointFailureStrategy
 
@@ -54,6 +55,7 @@ module FtpInternal =
     let secsToMsFloat (s:float<s>) = (s * 1000.0) / 1.0<s>
 
     type Options = {
+            InitialDelay            : float<s>
             Interval                : float<s>
             Credentials             : Credentials option
             AfterSuccess            : (Message -> FtpScript)
@@ -77,6 +79,7 @@ module FtpInternal =
         with
         static member convertOptions options =
             let defaultOptions = {
+                InitialDelay = 0.0<s>;
                 Interval = 10.0<s> 
                 Credentials = None
                 AfterSuccess = fun _ -> FtpScript.Empty
@@ -88,15 +91,20 @@ module FtpInternal =
             options 
             |> List.fold (fun state option ->
                 match option with
-                |   Interval(i)         -> {state with Interval = i}
+                |   InitialDelay(wt)         -> 
+                    let wait = Utility.secsToMsFloat wt
+                    if wait < 0.0 then raise(ValidationException "ERROR: InitialDelay cannot be less than 0.0")
+                    {state with InitialDelay = wt}
+                |   Interval(wt)         ->
+                    let wait = Utility.secsToMsFloat wt
+                    if wait < 0.01 then raise(ValidationException "ERROR: Interval cannot be less than 0.01")
+                    {state with Interval = wt}
                 |   Credentials(c)      -> {state with Credentials = Some(c)}
                 |   AfterSuccess(func)  -> {state with AfterSuccess = func}
                 |   AfterError(func)    -> {state with AfterError = func}
                 |   ConcurrentTasks(amount)  -> 
-                    if amount > 0 then
-                        {state with ConcurrentTasks = amount}
-                    else
-                        raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
+                    if amount <= 0 then raise(ValidationException "ERROR: ConcurrentTasks must be larger than 0")
+                    {state with ConcurrentTasks = amount}                          
                 |   TransferMode(mode)  -> {state with TransferMode = mode}
                 |   EndpointFailureStrategy(strategy) ->
                         strategy.Validate()
@@ -265,6 +273,12 @@ type Ftp(props : Properties, initialState : State) as this =
                 |  StopImmediately -> (this :> IProducerDriver).Stop()
 
         }
+
+        if props.Options.InitialDelay > 0.0<s> then
+            logger.Debug (sprintf "InitialDelay is set to %A, waiting..." props.Options.InitialDelay)
+            let waitInMs = int(props.Options.InitialDelay |> Utility.secsToMsFloat)
+            Async.Sleep <| waitInMs |> Async.RunSynchronously
+
         state.Timer.Start()
         Async.Start(loop(None), cancellationToken = state.Cancellation.Token)
         logger.Debug(sprintf "Started FTP Listener for path: %s" (getPath None))

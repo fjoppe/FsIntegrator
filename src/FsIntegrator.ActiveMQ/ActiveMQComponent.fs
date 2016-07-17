@@ -5,6 +5,7 @@ open System.Threading
 open Apache.NMS
 open Apache.NMS.Util
 open Apache.NMS.ActiveMQ.Commands
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 open NLog
 open FsIntegrator.Core
 open FsIntegrator.RouteEngine
@@ -27,6 +28,7 @@ type RedeliveryPolicy = {
         static member Empty = {MaxRedelivery = 0; InitialDelay = 0; Delay = 0}
 
 type AMQOption =
+    |   InitialDelay of float<s>
     |   Connection  of string
     |   Credentials of Credentials
     |   DestinationType of DestinationType
@@ -42,6 +44,7 @@ module ActiveMQInternal=
 
     type Properties = {
             Id               : Guid
+            InitialDelay     : float<s>
             Destination      : DestinationNameType
             Connection       : Uri
             Credentials      : Credentials option
@@ -54,6 +57,7 @@ module ActiveMQInternal=
         static member convertOptions options =
             let defaultOptions = {
                 Id = Guid.NewGuid()
+                InitialDelay = 0.0<s>;
                 Destination = Fixed(String.Empty)
                 DestinationType = DestinationType.Queue
                 Connection = new Uri("urn:invalid")
@@ -65,18 +69,20 @@ module ActiveMQInternal=
             options 
             |> List.fold (fun state option ->
                 match option with
+                |   InitialDelay(wt) -> 
+                    let wait = Utility.secsToMsFloat wt
+                    if wait < 0.0 then raise(ValidationException "ERROR: InitialDelay cannot be less than 0.0")
+                    {state with InitialDelay = wt}
                 |   Connection(c)       -> {state with Connection = new Uri(c)}
                 |   Credentials(c)      -> {state with Credentials = Some(c)}
                 |   DestinationType(d)  -> {state with DestinationType = d}
                 |   ConcurrentTasks(amount)  -> 
-                    if amount > 0 then
-                        {state with ConcurrentTasks = amount}
-                    else
-                        raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
+                    if amount <= 0 then raise(ValidationException "ERROR: ConcurrentTasks must be larger than 0")
+                    {state with ConcurrentTasks = amount}                          
                 |   RedeliveryPolicy(rp) -> {state with RedeliveryPolicy = rp}
                 |   EndpointFailureStrategy(strategy) ->
-                       strategy.Validate()
-                       {state with EndpointFailureStrategy = strategy}
+                    strategy.Validate()
+                    {state with EndpointFailureStrategy = strategy}
             ) defaultOptions
 
         static member Create destination options = 
@@ -210,6 +216,12 @@ type ActiveMQ(props : Properties, initialState : State) as this =
                     |   None    -> return! (sleepAndLoop wt 1)
                 |  StopImmediately -> (this :> IProducerDriver).Stop()
         }
+
+        if props.InitialDelay > 0.0<s> then
+            logger.Debug (sprintf "InitialDelay is set to %A, waiting..." props.InitialDelay)
+            let waitInMs = int(props.InitialDelay |> Utility.secsToMsFloat)
+            Async.Sleep <| waitInMs |> Async.RunSynchronously
+
         Async.Start(loop(None), cancellationToken = state.Cancellation.Token)       
         connection.Start()
         logger.Debug(sprintf "Started ActiveMQ Listener for destination: '%s', which is a '%A'" (getDestination None) props.DestinationType)

@@ -21,6 +21,7 @@ type FileMessageHeader = {
             { FileInfo = fileInfo}
 
 type FileOption =
+     |  InitialDelay of float<s>
      |  Interval of float<s>
      |  CreatePathIfNotExists of bool
      |  AfterSuccess of (Message -> FSScript)
@@ -32,6 +33,7 @@ type FileOption =
 module FileInternal =
 
     type Options = {
+         InitialDelay       : float<s>
          Interval           : float<s>
          CreateIfNotExists  : bool
          AfterSuccess       : (Message -> FSScript)
@@ -59,6 +61,7 @@ module FileInternal =
                 (source, folder, Path.Combine(folder, filename))
             
             let defaultOptions = {
+                InitialDelay = 0.0<s>;
                 Interval = 10.0<s>; 
                 CreateIfNotExists = false
                 AfterSuccess = fun _ -> FSScript.Empty
@@ -69,18 +72,23 @@ module FileInternal =
             options 
             |> List.fold (fun state option ->
                 match option with
-                |   Interval(i)              -> {state with Interval = i}
+                |   InitialDelay(wt)         -> 
+                    let wait = Utility.secsToMsFloat wt
+                    if wait < 0.0 then raise(ValidationException "ERROR: InitialDelay cannot be less than 0.0")
+                    {state with InitialDelay = wt}
+                |   Interval(wt)             ->
+                    let wait = Utility.secsToMsFloat wt
+                    if wait < 0.01 then raise(ValidationException "ERROR: Interval cannot be less than 0.01")
+                    {state with Interval = wt}
                 |   CreatePathIfNotExists(b) -> {state with CreateIfNotExists = b}
                 |   AfterSuccess(func)       -> {state with AfterSuccess = func}
                 |   AfterError(func)         -> {state with AfterError = func}
                 |   ConcurrentTasks(amount)  -> 
-                       if amount > 0 then
-                           {state with ConcurrentTasks = amount}
-                       else
-                           raise <| ValidationException "ERROR: ConcurrentTasks must be larger than 0"
+                    if amount <= 0 then raise(ValidationException "ERROR: ConcurrentTasks must be larger than 0")
+                    {state with ConcurrentTasks = amount}                          
                 |  EndpointFailureStrategy(strategy) ->
-                       strategy.Validate()
-                       {state with EndpointFailureStrategy = strategy}
+                    strategy.Validate()
+                    {state with EndpointFailureStrategy = strategy}
             ) defaultOptions
 
         static member Create path options = 
@@ -220,15 +228,31 @@ type File(props : Properties, initialState: State) as this =
                     Async.Sleep <| int(waitInMs) |> Async.RunSynchronously
                     loop(Some s)
                 match props.Options.EndpointFailureStrategy with
-                |  EndpointFailureStrategy.WaitAndRetryInfinite wt -> return! (sleepAndLoop wt 0)
+                |  EndpointFailureStrategy.WaitAndRetryInfinite wt -> 
+                    logger.Debug (sprintf "Retrying... EndpointFailure strategy is set to: WaitAndRetryInfinite(%A)" wt)
+                    return! (sleepAndLoop wt 0)
                 |  EndpointFailureStrategy.WaitAndRetryCountDownBeforeStop(wt, cnt) ->
                     match retryCount with
                     |   Some(x) -> 
-                        if(x < cnt) then return! (sleepAndLoop wt (x+1))
-                        else (this :> IProducerDriver).Stop()
-                    |   None    -> return! (sleepAndLoop wt 1)
-                |  StopImmediately -> (this :> IProducerDriver).Stop()
+                        if(x < cnt) then 
+                            logger.Debug (sprintf "Retrying... EndpointFailure strategy is set to: WaitAndRetryCountDownBeforeStop(%A, %d); retry: %d of %d" wt cnt x cnt)
+                            return! (sleepAndLoop wt (x+1))
+                        else 
+                            logger.Debug (sprintf "Retrying... EndpointFailure strategy is set to: WaitAndRetryCountDownBeforeStop(%A, %d); stopping.." wt cnt)
+                            (this :> IProducerDriver).Stop()
+                    |   None    -> 
+                        logger.Debug (sprintf "Retrying... EndpointFailure strategy is set to: WaitAndRetryCountDownBeforeStop(%A, %d); retry: %d of %d" wt cnt 1 cnt)
+                        return! (sleepAndLoop wt 1)
+                |  StopImmediately ->
+                    logger.Debug "Stopping... EndpointFailure strategy is set to: StopImmediately"
+                    (this :> IProducerDriver).Stop()
         }
+
+        if props.Options.InitialDelay > 0.0<s> then
+            logger.Debug (sprintf "InitialDelay is set to %A, waiting..." props.Options.InitialDelay)
+            let waitInMs = int(props.Options.InitialDelay |> Utility.secsToMsFloat)
+            Async.Sleep <| waitInMs |> Async.RunSynchronously
+
         state.Timer.Start()
         Async.Start(loop(None), cancellationToken = state.Cancellation.Token)
         logger.Debug(sprintf "Started FileListener for path: '%s'" (getPath None))

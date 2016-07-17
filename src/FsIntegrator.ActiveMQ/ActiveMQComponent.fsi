@@ -3,6 +3,7 @@
 open System
 open FsIntegrator.RouteEngine
 open FsIntegrator.MessageOperations
+open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 exception ActiveMQComponentException of string
 
@@ -21,6 +22,8 @@ type RedeliveryPolicy = {
     }
 
 type AMQOption =
+    /// Delays operation after the route has been started
+    |  InitialDelay of float<s>
     /// The Uri to the ActiveMQ service, in the form of "activemq:tcp://yourhost:61616"
     |   Connection  of string
     /// The credentials for the ActiveMQ service

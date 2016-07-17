@@ -31,6 +31,8 @@ type FtpMessageHeader = {
 type TransferMode = Active | Passive
 
 type FtpOption =
+    /// Delays operation after the route has been started
+    |  InitialDelay of float<s>
     /// Specifies the polling interval
     |   Interval of float<s>
     /// The FTP credentials

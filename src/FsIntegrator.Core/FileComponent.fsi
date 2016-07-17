@@ -14,6 +14,8 @@ type FileMessageHeader = {
 
 
 type FileOption =
+    /// Delays operation after the route has been started
+    |  InitialDelay of float<s>
     /// Specifies the minimum interval for which the file listener polls the specified endpoint. Default = 10 sec
     |   Interval of float<s>
     /// Specifies whether the listen-to folder needs to be created if it does not exist. Default = false
