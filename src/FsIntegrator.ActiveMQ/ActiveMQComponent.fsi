@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 

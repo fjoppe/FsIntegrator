@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{63297B98-5CED-492C-A5B7-A5B4F73CF142}"
 	ProjectSection(SolutionItems) = preProject
@@ -31,17 +31,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "content", "content", "{8E6D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED8079DD-2B06-4030-9F0F-DC548F98E1C4}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestScripts", "TestScripts", "{36B68559-7787-4409-B6F6-2744253B20FC}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test Scripts", "Test Scripts", "{36B68559-7787-4409-B6F6-2744253B20FC}"
 	ProjectSection(SolutionItems) = preProject
 		src\TestScripts\Demo Script.fsx = src\TestScripts\Demo Script.fsx
 		src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx = src\TestScripts\FailFast - 2 routes from file to activemq to ftp.fsx
-		src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\TestScripts\FailFast - ActiveMQ NMS Exploration.fsx
 		src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx = src\TestScripts\FailFast - FsIntegrator ActiveMQ Listener.fsx
 		src\TestScripts\FailFast - FsIntegrator Condition Logic.fsx = src\TestScripts\FailFast - FsIntegrator Condition Logic.fsx
 		src\TestScripts\FailFast - FsIntegrator Error test.fsx = src\TestScripts\FailFast - FsIntegrator Error test.fsx
 		src\TestScripts\FailFast - FsIntegrator File Listener.fsx = src\TestScripts\FailFast - FsIntegrator File Listener.fsx
 		src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx = src\TestScripts\FailFast - FsIntegrator FTP Listener.fsx
-		src\TestScripts\FailFast - FTP Client Exploration.fsx = src\TestScripts\FailFast - FTP Client Exploration.fsx
 		src\TestScripts\nlog.config = src\TestScripts\nlog.config
 		src\TestScripts\nlog.fsx = src\TestScripts\nlog.fsx
 	EndProjectSection
@@ -53,6 +51,15 @@ EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsIntegrator.FTP", "src\FsIntegrator.FTP\FsIntegrator.FTP.fsproj", "{AAF73F89-4CDE-4F79-9CCE-BCAA50A9686E}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsIntegrator.Tests", "tests\FsIntegrator.Tests\FsIntegrator.Tests.fsproj", "{5A5167DF-C337-4EB2-9EB5-D6650102A246}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsIntegrator.RabbitMQ", "src\FsIntegrator.RabbitMQ\FsIntegrator.RabbitMQ.fsproj", "{0549D29B-5669-4F70-BAE5-BB4B70CA4832}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Experiment Scripts", "Experiment Scripts", "{A67B5615-49CC-4D18-87F2-0663AFB93C49}"
+	ProjectSection(SolutionItems) = preProject
+		src\ExperimentScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\ExperimentScripts\FailFast - ActiveMQ NMS Exploration.fsx
+		src\ExperimentScripts\FailFast - FTP Client Exploration.fsx = src\ExperimentScripts\FailFast - FTP Client Exploration.fsx
+		src\ExperimentScripts\FailFast - RabbitMQ Client Exploration.fsx = src\ExperimentScripts\FailFast - RabbitMQ Client Exploration.fsx
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -76,6 +83,10 @@ Global
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A5167DF-C337-4EB2-9EB5-D6650102A246}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0549D29B-5669-4F70-BAE5-BB4B70CA4832}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0549D29B-5669-4F70-BAE5-BB4B70CA4832}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0549D29B-5669-4F70-BAE5-BB4B70CA4832}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0549D29B-5669-4F70-BAE5-BB4B70CA4832}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

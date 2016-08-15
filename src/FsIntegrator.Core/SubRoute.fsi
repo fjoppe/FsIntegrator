@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open FsIntegrator
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
 
 exception SubRouteException of string

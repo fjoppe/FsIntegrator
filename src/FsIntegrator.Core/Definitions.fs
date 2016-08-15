@@ -2,7 +2,7 @@
 
 open System
 open FsIntegrator
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
 
 

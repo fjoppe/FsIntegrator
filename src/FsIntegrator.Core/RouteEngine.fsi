@@ -1,7 +1,8 @@
-﻿namespace FsIntegrator.RouteEngine
+﻿namespace FsIntegrator
 
 open System
 open FsIntegrator
+open FsIntegrator.Routing.Types
 
 [<AutoOpen>]
 module RouteEngine =

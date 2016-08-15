@@ -1,8 +1,9 @@
 ﻿namespace FsIntegrator
 
 open System
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
+
 
 type DefinitionType =
     | ProcessStep of (FsIntegrator.Message -> FsIntegrator.Message)

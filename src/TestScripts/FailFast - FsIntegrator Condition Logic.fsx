@@ -25,8 +25,6 @@ open System.IO
 open NLog
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.Producers
-open FsIntegrator.Consumers
 open FsIntegrator.RouteEngine
 open FsIntegrator.MessageOperations
 open FsIntegrator.Conditionals

@@ -4,7 +4,7 @@ open System
 open System.Threading
 open NLog
 open FsIntegrator
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 

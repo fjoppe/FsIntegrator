@@ -17,8 +17,6 @@ NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__
 
 open System.IO
 open FsIntegrator.Core
-open FsIntegrator.Producers
-open FsIntegrator.Consumers
 open FsIntegrator.RouteEngine
 
 

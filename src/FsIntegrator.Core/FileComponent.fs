@@ -7,7 +7,7 @@ open System.Timers
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 open FSharpx.Control
 open NLog
-open FsIntegrator.RouteEngine
+open FsIntegrator.Routing.Types
 open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 

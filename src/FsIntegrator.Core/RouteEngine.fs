@@ -1,8 +1,9 @@
-﻿namespace FsIntegrator.RouteEngine
+﻿namespace FsIntegrator
 
 open System
 open NLog
-open FsIntegrator
+//open FsIntegrator
+open FsIntegrator.Routing.Types
 
 
 [<AutoOpen>]
