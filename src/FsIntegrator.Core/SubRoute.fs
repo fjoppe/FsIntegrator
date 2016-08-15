@@ -5,7 +5,6 @@ open System.Threading
 open NLog
 open FsIntegrator
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 exception SubRouteException of string

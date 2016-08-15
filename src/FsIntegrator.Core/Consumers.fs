@@ -4,7 +4,6 @@ open System.IO
 open System.Xml.XPath
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.MessageOperations
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 

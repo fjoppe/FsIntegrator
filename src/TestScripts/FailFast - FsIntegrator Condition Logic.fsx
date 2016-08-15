@@ -26,9 +26,6 @@ open NLog
 open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.RouteEngine
-open FsIntegrator.MessageOperations
-open FsIntegrator.Conditionals
-
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 #load "nlog.fsx"

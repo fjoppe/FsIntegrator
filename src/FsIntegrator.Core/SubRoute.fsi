@@ -2,7 +2,6 @@
 
 open FsIntegrator
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
 
 exception SubRouteException of string
 

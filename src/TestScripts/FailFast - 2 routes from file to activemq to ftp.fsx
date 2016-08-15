@@ -27,7 +27,6 @@ open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.RouteEngine
 
-
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 #load "nlog.fsx"
 NlogInit.With __SOURCE_DIRECTORY__ __SOURCE_FILE__

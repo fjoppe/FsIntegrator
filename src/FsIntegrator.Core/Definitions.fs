@@ -3,7 +3,6 @@
 open System
 open FsIntegrator
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
 
 
 type DefinitionType =

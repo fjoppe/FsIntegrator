@@ -1,7 +1,7 @@
 ﻿namespace FsIntegrator
 
 open FsIntegrator
-open FsIntegrator.MessageOperations
+//open FsIntegrator.MessageOperations
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 
     module FtpConsumerDefaults =

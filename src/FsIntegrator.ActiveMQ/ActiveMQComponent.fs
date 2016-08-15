@@ -9,7 +9,7 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 open NLog
 open FsIntegrator.Core
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
+//open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 exception ActiveMQComponentException of string

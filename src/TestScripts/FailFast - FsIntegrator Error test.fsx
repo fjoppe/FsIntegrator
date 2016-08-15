@@ -27,8 +27,6 @@ open System.IO
 open FsIntegrator
 open FsIntegrator.Core
 open FsIntegrator.RouteEngine
-open FsIntegrator.ErrorHandlers
-
 
 //  Configure Nlog, logfile can be found under: ./src/TestScripts/logs/<scriptname>.log
 #load "nlog.fsx"

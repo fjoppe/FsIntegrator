@@ -57,8 +57,11 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Experiment Scripts", "Experiment Scripts", "{A67B5615-49CC-4D18-87F2-0663AFB93C49}"
 	ProjectSection(SolutionItems) = preProject
 		src\ExperimentScripts\FailFast - ActiveMQ NMS Exploration.fsx = src\ExperimentScripts\FailFast - ActiveMQ NMS Exploration.fsx
+		src\ExperimentScripts\FailFast - FSMonad.fsx = src\ExperimentScripts\FailFast - FSMonad.fsx
 		src\ExperimentScripts\FailFast - FTP Client Exploration.fsx = src\ExperimentScripts\FailFast - FTP Client Exploration.fsx
 		src\ExperimentScripts\FailFast - RabbitMQ Client Exploration.fsx = src\ExperimentScripts\FailFast - RabbitMQ Client Exploration.fsx
+		src\ExperimentScripts\FailFast - Reflection.fsx = src\ExperimentScripts\FailFast - Reflection.fsx
+		src\ExperimentScripts\FailFast - Resource Pool.fsx = src\ExperimentScripts\FailFast - Resource Pool.fsx
 	EndProjectSection
 EndProject
 Global

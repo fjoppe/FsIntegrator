@@ -1,8 +1,5 @@
 ﻿namespace FsIntegrator
 
-open FsIntegrator
-open FsIntegrator.MessageOperations
-
 
 // Contains the Core consumers, reference "FsIntegrator.Core.dll" to use it.
 type To = struct end

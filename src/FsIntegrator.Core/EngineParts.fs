@@ -43,6 +43,5 @@ module Types =
         //  This should retrieve the component's implementation for consuming messages
         abstract member ConsumerDriver : IConsumerDriver with get
         
-//module Defines =
     [<Literal>]
     let WaitForHook = 10

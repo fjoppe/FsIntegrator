@@ -52,7 +52,3 @@ type Operators = Operation with
     static member FlowOperator (Operation, l:ConditionalRoute, r:Intermediate)    = Operators.FlowOperator(Operation, l, r.DefinitionType)
     static member FlowOperator (Operation, l:ErrorHandlerRoute, r:Intermediate)   = Operators.FlowOperator(Operation, l, r.DefinitionType)
 
-//#nowarn "0064"
-//module Core =
-//    let inline (=>=) (l:'N) (r:'M) = ((^T or ^N or ^M) : (static member FlowOperator : ^T * ^N * ^M -> _) (Operation, l, r))
-//

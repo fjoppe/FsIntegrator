@@ -8,7 +8,6 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 open FSharpx.Control
 open NLog
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
 open FsIntegrator.Utility
 
 exception FileComponentException of string

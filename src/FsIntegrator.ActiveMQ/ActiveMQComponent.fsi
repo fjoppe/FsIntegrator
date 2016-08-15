@@ -2,7 +2,7 @@
 
 open System
 open FsIntegrator.Routing.Types
-open FsIntegrator.MessageOperations
+//open FsIntegrator.MessageOperations
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 exception ActiveMQComponentException of string

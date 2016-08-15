@@ -2,7 +2,6 @@
 
 open System
 open NLog
-//open FsIntegrator
 open FsIntegrator.Routing.Types
 
 

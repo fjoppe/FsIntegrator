@@ -2,7 +2,7 @@
 
 open FsIntegrator
 open FsIntegrator.Core
-open FsIntegrator.MessageOperations
+//open FsIntegrator.MessageOperations
 
 /// Contains the FTP Consumer, reference "FsIntegrator.FTP.dll" to use it.
 type To = struct end
